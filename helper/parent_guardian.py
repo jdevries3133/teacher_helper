@@ -44,3 +44,15 @@ class ParentGuardian:
                     'Phone number should be of type int.'
                 )
         # assignment of utility attributes
+
+    def __str__(self):
+        outs = [
+            self.relationship_to_student,
+            self.name,
+            f'Contact allowed: {self.allow_contact}',
+            f'Is primary contact: {self.primary_contact}',
+            f'Mobile Phone: {self.mobile_phone}',
+            f'Email Address: {self.email}',
+            '\n',
+        ]
+        return '\n'.join(['\t' + str(i) for i in outs if i])
