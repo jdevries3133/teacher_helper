@@ -199,5 +199,8 @@ class OnCourseMixin:
                 parent = ParentGuardian(clean_context)
                 student.guardians.append(parent)
                 if clean_context['primary_contact']:
+                    # It is important that the primary_contact attribute of the
+                    # student is assigned while parent / guardian data is being
+                    # parsed.
                     student.primary_contact = parent
         return self
