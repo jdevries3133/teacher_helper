@@ -1,11 +1,14 @@
+from copy import copy
 import csv
 from datetime import datetime
 import os
+from pathlib import Path
 import shelve
 import itertools  # use to return iterators for different scenarios
 
-from homeroom import Homeroom
-from student import Student
+from .csv_parsers import parse_homeroom, parse_group
+from .homeroom import Homeroom
+from .student import Student
 
 class Helper:
     def __init__(self, homerooms=None, students=None, groups=None):
@@ -14,8 +17,8 @@ class Helper:
         self.groups = groups
 
     def write_cache(self):
-        with shelve.open('cache', 'w') as db:
-            db['data'] = self
+        with shelve.open('cache', 'c') as db:
+            db['data'] = self.__dict__
             db['date'] = datetime.now()
 
     @classmethod
@@ -25,61 +28,53 @@ class Helper:
         and miscellaneous groups. Note that these CSV files must follow a
         fairly strict naming convention as described in this module's readme.
         """
-        for path in os.listdir(csvdir):
-            print(path)
-            continue
-            if csvdir:
-                self.teacher = csv_filename[1:-4]
-                self.grade_level = csv_filename[0]
+        homerooms = []
+        students = []
+        groups = []
 
-                # student names and ID's in the csv
-                ID_HEADER_STRING = 'ID'
-                NAME_HEADER_STRING = 'Name'
+        # iterate through every csv of various types of student lists, respond
+        # to flags as per the readme.
+        for filename in os.listdir(csvdir):
 
-                # assign indicies of id and name rows to variables "id_index" and "name
-                # index."
-                with open(csv_path, 'r') as csv_file:
-                    reader = csv.reader(csv_file)
-                    students = []
-                    id_index, name_index, = None, None
-                    while not (id_index or name_index):
-                        for row in reader:
-                            for index, item in enumerate(row):
-                                if item == 'ID':
-                                    id_index = index
-                                if item == 'Name':
-                                    name_index = index
+            # skip .DS_store and other nonsense
+            if '.csv' not in filename:
+                continue
 
-                # instantiate a student for every student in the csv
-                self.students = []
-                with open(csv_path, 'r') as csv_file:
-                    reader = csv.reader(csv_file)
-                    self.students = []
-                    for row in reader:
-                        inverted_name = row[1]
-                        flip_index = inverted_name.index(',')
-                        last_name = inverted_name[:flip_index]
-                        first_name = inverted_name[(flip_index + 2):]
+            path_to_csv = Path(csvdir, filename)
 
-                        context = {
-                            'first_name': first_name,
-                            'last_name': last_name,
-                            'student_id': int(row[0]),
-                            'email': None,
-                            'homeroom': csv_filename[1:-4],
-                            'grade_level': csv_filename[0],
-                        }
+            # call parsing functions
+            if path_to_csv.stem[0] == 'h':
+                homeroom = parse_homeroom(path_to_csv)
+                homerooms.append(homeroom)
+                students += [st for st in homeroom.students if st.name not in [s.name for s in students]]
 
-                        self.students.append(Student(context))
+            elif path_to_csv.stem[0] == 'g':
+                pass
+            elif path_to_csv.stem[0] == 'ph':
+                group = parse_group(path_to_csv)
+                groups.append(group)
+                names_already_added = [st.name for st in students]
 
-    @staticmethod
-    def read_cache():
+                for st in copy(group.students):
+                    if st.name in names_already_added:
+                        group.students.remove(st)
+                        replacement = [s for s in students if s.name == st.name][0]
+                        group.students.append([s for s in students if s.name == st.name][0])
+                    else:
+                        students.append(st)
+
+            else:
+                raise Exception(f'Unable to parse file: {filename}')
+
+        return cls(homerooms, students, groups)
+
+    @classmethod
+    def read_cache(cls):
         """
         This static method returns a class because I like to break the rules.
         """
-
         with shelve.open('cache', 'r') as db:
-            cls = db['data']
+            clsdict = db['data']
             date = db['date']
 
         if datetime.now().month in range(9, 12) and date.month in range(1, 7):
@@ -88,7 +83,7 @@ class Helper:
                 'provide new data, re-instantiate, and re-write cache.'
             )
 
-        return cls
+        return cls(clsdict['homerooms'], clsdict['students'], clsdict['groups'])
 
 
 

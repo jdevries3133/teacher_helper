@@ -1,6 +1,6 @@
-import genesis
-
 from bs4 import BeautifulSoup
+
+from .genesis import get_session
 
 class Student:
     def __init__(self, context):
@@ -22,22 +22,24 @@ class Student:
         if context['email']:
             self.email = email
 
-    def get_email(self):
+    def get_genesis_email(self):
         """
         Make post request to login, save cookies, then rock and roll baby.
         """
-        session = genesis.get_session()
-        link = (
-            'https://genesis.sparta.org/sparta/sis/view?module=studentdata'
-            '&category=modifystudent&tab1=demographics&tab2=contacts2&acti'
-            f'on=form&studentid={self.student_id}&mode=cards'
-        )
-        resp = session.get(link)
-        soup = BeautifulSoup(resp.text, features='html.parser')
-        atags = soup.find_all('a')
-        self.email = [t.text for t in atags if '@students.sparta.org' in t.text][0]
-        print(f'Got email {self.email}\nFor {self.name}')
+        try:
+            session = get_session()
+            link = (
+                'https://genesis.sparta.org/sparta/sis/view?module=studentdata'
+                '&category=modifystudent&tab1=demographics&tab2=contacts2&acti'
+                f'on=form&studentid={self.student_id}&mode=cards'
+            )
+            resp = session.get(link)
+            soup = BeautifulSoup(resp.text, features='html.parser')
+            atags = soup.find_all('a')
+            self.email = [t.text for t in atags if '@students.sparta.org' in t.text][0]
+            print(f'Got email {self.email}\nFor {self.name}')
 
-        return self.email
+            return self.email
 
-
+        except Exception as e:
+            return f'failed on {self.name} due to exception: {e}'

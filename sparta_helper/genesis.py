@@ -1,6 +1,6 @@
 import requests
 
-from secrets_genesis import Login
+from .secrets_genesis import Login
 
 def get_session():
     """
