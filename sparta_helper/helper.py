@@ -18,8 +18,16 @@ class Helper:
 
     def write_cache(self):
         with shelve.open('cache', 'c') as db:
-            db['data'] = self.__dict__
+            db['data'] = self
             db['date'] = datetime.now()
+
+    def read_emails_from_csv(self, path):
+        with open(path, 'r') as csvfile:
+            rd = csv.reader(csvfile)
+            for row in rd:
+                for st in self.students:
+                    if st.student_id == row[0]:
+                        st.email = row[1]
 
     @classmethod
     def new_school_year(cls, csvdir):
@@ -68,13 +76,15 @@ class Helper:
 
         return cls(homerooms, students, groups)
 
-    @classmethod
-    def read_cache(cls):
+    @staticmethod
+    def read_cache():
         """
         This static method returns a class because I like to break the rules.
+        
+        there's a reason for the rules; this garbage doesn't work
         """
         with shelve.open('cache', 'r') as db:
-            clsdict = db['data']
+            data = db['data']
             date = db['date']
 
         if datetime.now().month in range(9, 12) and date.month in range(1, 7):
@@ -83,7 +93,7 @@ class Helper:
                 'provide new data, re-instantiate, and re-write cache.'
             )
 
-        return cls(clsdict['homerooms'], clsdict['students'], clsdict['groups'])
+        return data
 
 
 

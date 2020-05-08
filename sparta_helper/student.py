@@ -1,3 +1,6 @@
+import csv
+import os
+
 from bs4 import BeautifulSoup
 
 from .genesis import get_session
@@ -6,11 +9,11 @@ class Student:
     def __init__(self, context):
         """
         Context must include:
-            first name
-            last name
-            student id
+            first_name
+            last_name
+            student_id
             homeroom
-            grade level
+            grade_level
         """
         self.first_name = context['first_name']
         self.last_name = context['last_name']
@@ -20,7 +23,7 @@ class Student:
         self.grade_level = context['grade_level']
 
         if context['email']:
-            self.email = email
+            self.email = context['email']
 
     def get_genesis_email(self):
         """
@@ -36,10 +39,27 @@ class Student:
             resp = session.get(link)
             soup = BeautifulSoup(resp.text, features='html.parser')
             atags = soup.find_all('a')
-            self.email = [t.text for t in atags if '@students.sparta.org' in t.text][0]
+            self.email = [t.text for t in atags if '@students.sparta.org' in t.text][0].lower()
             print(f'Got email {self.email}\nFor {self.name}')
 
             return self.email
 
         except Exception as e:
             return f'failed on {self.name} due to exception: {e}'
+
+    def get_email_from_csv(self, direc=None):
+        if 'student_emails.csv' not in os.listdir('.'):
+            raise Exception(
+                '"student_emails.csv" must be present in the module directory, '
+                'or its path must be passed to to this function as an optional '
+                'parameter.'
+            )
+            if not direc:
+                direc = 'student_emails.csv'
+
+            with open(direc, 'r') as csvfile:
+                rd = csv.reader(csvfile)
+                my_row = [r for r in rd if r[0] == self.student_id]
+                print('finish writing this function boi')
+                breakpoint()
+                self.email = my_row[1]

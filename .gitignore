@@ -1,7 +1,8 @@
 */__pycache__
 *.pyc
 *.db*
-secrets_*
-source_data/*
+archive
+*secrets*
+source_data
 tags
 venv

@@ -1,3 +1,4 @@
+from pathlib import Path
 from helper import Helper
 
 """
@@ -16,7 +17,3 @@ for now.
 """
 
 MODULE_BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
-
-helper = Helper.read_cache()
-
-helper.write_cache()
