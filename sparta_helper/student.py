@@ -15,15 +15,29 @@ class Student:
             homeroom
             grade_level
         """
+        need_defaults = [
+            'first_name',
+            'last_name',
+            'student_id',
+            'homeroom',
+            'grade_level',
+            'groups',
+            'email'
+        ]
+
+        context.setdefault('groups', [])
+
+        for key in need_defaults:
+            context.setdefault(key, None)
+
         self.first_name = context['first_name']
         self.last_name = context['last_name']
         self.name = self.first_name + ' ' + self.last_name
         self.student_id = context['student_id']
         self.homeroom = context['homeroom']
         self.grade_level = context['grade_level']
-
-        if context['email']:
-            self.email = context['email']
+        self.groups = context['groups']
+        self.email = context['email']
 
     def get_genesis_email(self):
         """
@@ -39,6 +53,7 @@ class Student:
             resp = session.get(link)
             soup = BeautifulSoup(resp.text, features='html.parser')
             atags = soup.find_all('a')
+            breakpoint()
             self.email = [t.text for t in atags if '@students.sparta.org' in t.text][0].lower()
             print(f'Got email {self.email}\nFor {self.name}')
 

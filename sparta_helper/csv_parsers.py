@@ -71,6 +71,7 @@ def parse_group(path):
                 'student_id': None,
                 'email': None,
                 'homeroom': None,
+                'groups': [group_name],
                 'grade_level': grade_level,
             }
             students.append(Student(context))

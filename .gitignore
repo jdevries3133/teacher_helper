@@ -2,7 +2,7 @@
 *.pyc
 *.db*
 archive
-*secrets*
+*secret*
 source_data
 tags
 venv
