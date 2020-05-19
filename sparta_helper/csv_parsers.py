@@ -52,7 +52,7 @@ def parse_homeroom(path):
             student = Student(context)
             students.append(student)
 
-    return Homeroom(teacher, grade_level, students)
+    return teacher, grade_level, students
 
 def parse_group(path):
     """
@@ -76,4 +76,20 @@ def parse_group(path):
             }
             students.append(Student(context))
 
-        return Group(group_name, grade_level, students)
+        return group_name, grade_level, students
+
+def nonparticipator_audit_flipgrid(csv_path, helper):
+    """
+    Recieves a path to a csv and a helper. For every row in the csv, it searches
+    for a matching student in helper.students. It appends that student's
+
+    assignment completion state to the student object. It also assigns each
+    assignment a UUID, and appends the assignment dictionary to the
+    helper.assignments list.
+
+    The modified helper object is returned.
+    """
+    pass
+
+def nonparticipator_audit_edpuzzle(csv_path, helper):
+    pass

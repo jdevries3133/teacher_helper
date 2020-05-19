@@ -1,4 +1,6 @@
-class Group:
+from .meta_groups import MetaGroup
+
+class Group(MetaGroup):
     """
     Group class is used to manage groups for extracurricular activities, field
     trips, and other purposes.

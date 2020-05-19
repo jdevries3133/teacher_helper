@@ -2,6 +2,9 @@
 *.pyc
 *.db*
 archive
+edpuzzle
+google_classrooms
+flipgrid
 *secret*
 source_data
 tags

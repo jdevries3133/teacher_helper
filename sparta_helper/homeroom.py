@@ -4,9 +4,10 @@ import os
 import re
 import shelve
 
+from .meta_groups import MetaGroup
 from .student import Student
 
-class Homeroom:
+class Homeroom(MetaGroup):
     def __init__(self, teacher, grade_level, students):
         """
         Ensure that string constants for csv headers of id, student names, and

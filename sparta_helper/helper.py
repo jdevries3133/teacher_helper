@@ -4,11 +4,16 @@ from datetime import datetime
 import os
 from pathlib import Path
 import shelve
-import itertools  # use to return iterators for different scenarios
 
 from fuzzywuzzy import process
 
-from .csv_parsers import parse_homeroom, parse_group
+from .csv_parsers import (
+    parse_homeroom,
+    parse_group,
+    nonparticipator_audit_flipgrid,
+)
+from .json_parsers import assignment_participation_audit
+from .group import Group
 from .homeroom import Homeroom
 from .student import Student
 
@@ -32,29 +37,27 @@ class Helper:
                         st.email = row[1]
 
     def resolve_missing_st_id(self):
+        """
+        Iterate through students who have no student ID. Perform a fuzzy match
+        on the pool of students, and ask the user if it is a match. No-ID case
+        often arises if a group list is imported with nicknames. Often, student
+        ID's are critical for LMS endpoints.
 
-        # students missing a student id
+        For now, if the user says "n," the student is just deleted. Obviously
+        the assumption is that students who are not part of the school are not
+        in any groups. This function must be modified to handle students who are
+        group members that are not students in the school.
+        """
+
         st_mis = [s for s in self.students if not s.student_id]
-
-        # students who have a student id
         good_sts = [s for s in self.students if s.student_id]
-
-        # for each student without an id
         for st in st_mis:
-
-            # find the nearest match in the list of students who have ids
             qset = process.extractOne(st.name, [s.name for s in good_sts])
-
-            # ask user to verify match
             print('\nDo these names match? (y/n)\n')
             u_in = input(st.name + '\t' + qset[0] + '\n').lower()
-
             # only accept 'y' or 'n'
             while True:
 
-                # assign some attributes of the id-rich student to the id-lacking
-                # one. Usually, bad id matches are due to nicknames, so this sort
-                # of merges these student instances.
                 if u_in == 'y':
                     st_good = [s for s in good_sts if s.name == qset[0]][0]
                     st.student_id = st_good.student_id
@@ -79,6 +82,52 @@ class Helper:
 
         return self.students
 
+    def find_non_participators(self, directories):
+        """
+        Opens every file in each of the passed directories (csv or json), and
+        identfies assignments as:
+
+            Google classroom json exports
+            Flipgrid csv exports
+            Edpuzzle csv exports
+
+        Then, the function writes overall participation data to a conditionally
+        formatted excel file with openpyxl.
+        """
+
+        # give each assignment a unique id.
+        # maintain a dictionary of assignments, where the UUID is the key, and
+        # the value is a dictionary with keys "NAME", and "DATE"
+
+        self.assignments = {}
+        for st in self.students:
+
+            """
+            this dict will have keys:
+
+                assignment_id: str
+                assignment_completed: bool
+            """
+            st.assignments = {}
+
+        for direc in directories:
+            for file_path in direc.iterdir():
+
+                # check for mac bs
+                if '.csv' not in file_path.name:
+                    if '.json' not in file_path.name:
+                        continue
+
+                # route file
+                if direc.name == 'google_classrooms':
+                    assignment_participation_audit(file_path, self)
+                if direc.name == 'flipgrid':
+                    continue
+                    nonparticipator_audit_flipgrid(file_path, self)
+                if direc.name == 'edpuzzle':
+                    continue
+                    nonparticipator_audit_edpuzzle(file_path, self)
+        breakpoint()
 
     @classmethod
     def new_school_year(cls, csvdir):
@@ -103,16 +152,18 @@ class Helper:
 
             # call parsing functions
             if path_to_csv.stem[0] == 'h':
-                homeroom = parse_homeroom(path_to_csv)
-
-                homerooms.append(homeroom)
-                for st in copy(homeroom.students):
+                teacher, grade_level, this_students = parse_homeroom(path_to_csv)
+                for st in copy(this_students):
                     if st.student_id in [s.student_id for s in students]:
                         match = Helper.get_matching_student(st, students, homeroom.teacher)
-                        homeroom.students.remove(st)
-                        homeroom.students.append(match)
+                        this_students.remove(st)
+                        this_students.append(match)
                     else:
                         students.append(st)
+
+                homeroom = Homeroom(teacher, grade_level, this_students)
+                homerooms.append(homeroom)
+                print('homeroom', homeroom.teacher, 'has', str(len(homeroom.students)), 'students')
 
             elif path_to_csv.stem[0] == 'g':
                 # deal with groups once all the homerooms are done to help
@@ -132,21 +183,20 @@ class Helper:
 
             if path_to_csv.stem[0] == 'g':
 
-                group = parse_group(path_to_csv)
-                for st in copy(group.students):
+                name, grade_level, this_students = parse_group(path_to_csv)
+                for st in copy(this_students):
                     if st.name in [s.name for s in students]:
                         match = Helper.get_matching_student(st, students)
-                        match.groups += group.name
-                        group.students.remove(st)
-                        group.students.append(match)
+                        match.groups += st.groups
+                        this_students.remove(st)
+                        this_students.append(match)
                     else:
                         students.append(st)
 
+                group = Group(name, grade_level, this_students)
                 groups.append(group)
 
-        for st in students:
-            if not st.student_id:
-                print(f'WARN: No student id for {st.name}')
+
 
         return cls(homerooms, students, groups)
 

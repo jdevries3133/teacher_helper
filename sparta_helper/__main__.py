@@ -14,6 +14,12 @@ is probably about due, because the picklized caching that I'm using now is
 very hacky. For right now, I am just going to ignore groups; choir doesn't exist
 at the moment anyway, so adding that complexity to the module serves no purpose
 for now.
+
+
+WARNING: using Helper.write_cache or Helper.read_cache inside __main__.py
+will not render a cache which is usable outside the module due to the shelve
+module's way of pickle class serialization and my inability to understand how
+to fix it.
 """
 
 MODULE_BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
