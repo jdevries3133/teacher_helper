@@ -55,7 +55,7 @@ def assignment_participation_audit(jsn_path, helper):
                 int(dst[2]),
             )
             timestamp = datetime.timestamp(dtm)
-            key = hash(assignment['title'])
+            key = assignment['title']
             if timestamp < 1583884800:
                 continue
 

@@ -1,6 +1,6 @@
-import requests
+import os
 
-from .secrets_genesis import Login
+import requests
 
 def get_session():
     """
@@ -8,10 +8,22 @@ def get_session():
     """
     session = requests.Session()
     session.get('https://genesis.sparta.org/sparta/sis/view?gohome=true')
+
+    username = os.getenv('GENESIS_USERNAME')
+    password = os.getenv('GENESIS_PASSWORD')
+    if not username or not password:
+        raise Exception(
+            f'"GENESIS_USERNAME and GENESIS_PASSWORD must be defined environment variables for '
+            'genesis authentication.'
+        )
+
     request = requests.Request(
         'POST',
         'https://genesis.sparta.org/sparta/sis/j_security_check',
-        data={'j_username': Login.username, 'j_password': Login.password},
+        data={
+            'j_username': username,
+            'j_password': password
+        },
     )
     session.send(request.prepare())
 

@@ -1,17 +1,9 @@
-import json
-import os
-
 from .helper import Helper
 
-def import_gcapi_creds(path):
-    """
-    Path must point to json object containing google classroom api credentials.
-    """
+import os
 
-    from .classroom_api import GoogleClassroom
+if not os.getenv('GENESIS_USERNAME'):
+    print('WARN: "GENESIS_USERNAME" should be a defined environment variable for genesis authentication.')
 
-    with open(path) as jsn:
-        creds = json.load(jsn)
-        GoogleClassroom.credentials = creds
-
-
+if not os.getenv('GENESIS_PASSWORD'):
+    print('WARN: "GENESIS_PASSWORD" should be a defined environment variable for genesis authentication.')

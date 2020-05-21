@@ -3,8 +3,15 @@ import csv
 from datetime import datetime
 import os
 from pathlib import Path
+from random import randint
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import shelve
 
+import pyautogui as pg
+import pyperclip as pc
+import pprint
 from fuzzywuzzy import process
 
 from .csv_parsers import (
@@ -15,9 +22,13 @@ from .csv_parsers import (
 from .json_parsers import assignment_participation_audit
 from .group import Group
 from .homeroom import Homeroom
+from .templates import Email
 from .student import Student
 
 class Helper:
+    """
+    A helper module that drives the entire module! See README.md
+    """
     def __init__(self, homerooms=None, students=None, groups=None):
         self.homerooms = homerooms
         self.students = students
@@ -36,7 +47,70 @@ class Helper:
                     if st.student_id == row[0]:
                         st.email = row[1]
 
-    def resolve_missing_st_id(self):
+    def find_nearest_match(self, student_names):
+        """
+        Takes a list of student names, and returns a list of student objects
+        from self.students. If there is no exact name match, it will perform a 
+        fuzzy match and ask the user to resolve the ambiguity in the command line.
+        """
+        for index, name in enumerate(copy(student_names)):
+
+            # direct match(es)
+            matches = [(s.name, s) for s in self.students if s.name == name]
+            if matches:
+
+                # single direct match
+                if len(matches) == 1:
+                    student_names[index] = matches[0][1]
+
+                # multiple matches
+                else:
+                    for match in matches:
+                        done = False
+
+                        print('-' * 80)
+                        print('\nDo these names match? (y/n)\n')
+                        
+                        u_in = print(name + '\t' + match[0] + '\n')
+
+                        while True:
+                            yn = input().lower()
+                            if yn == 'y':
+                                student_names[index] = match[1]
+                                break
+                                done = True
+                            elif yn == 'n':
+                                break
+                            else:
+                                print('Please enter ')
+
+                        if done:
+                            break
+
+            # no match
+            else:
+                qset = process.extractOne(name, [s.name for s in self.students])
+                print('-' * 80)
+                print('\nDo these names match? (y/n)\n')
+
+                while True:
+                    u_in = input(name + '\t' + qset[0] + '\n').lower()
+                    if u_in == 'y':
+                        student_names[index] = [s for s in self.students if s.name == qset[0]][0]
+                        break
+                    elif u_in == 'n':
+                        break
+                    else:
+                        print('Please enter "y" or "n."')
+
+        for name in copy(student_names):
+            if not isinstance(name, Student):
+                print(f'{name} was deleted because they had no match.')
+                student_names.remove(name)
+
+        return student_names ## now converted to Student class instances
+
+    def resolve_missing_st_ids(self):
         """
         Iterate through students who have no student ID. Perform a fuzzy match
         on the pool of students, and ask the user if it is a match. No-ID case
@@ -51,11 +125,13 @@ class Helper:
 
         st_mis = [s for s in self.students if not s.student_id]
         good_sts = [s for s in self.students if s.student_id]
+
         for st in st_mis:
+
             qset = process.extractOne(st.name, [s.name for s in good_sts])
             print('\nDo these names match? (y/n)\n')
             u_in = input(st.name + '\t' + qset[0] + '\n').lower()
-            # only accept 'y' or 'n'
+
             while True:
 
                 if u_in == 'y':
@@ -127,7 +203,120 @@ class Helper:
                 if direc.name == 'edpuzzle':
                     continue
                     nonparticipator_audit_edpuzzle(file_path, self)
-        breakpoint()
+
+    def stmp_email(self):
+        me = 'john.devries@sparta.org'
+        recipient = 'jdevries3133@gmail.com'
+
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = 'Your Soundtrap Account is Ready!'
+        msg['From'] = me
+        msg['To'] = recipient
+        text, html = Email.soundtrap()
+
+
+    def email_students(self, students, template_flag):
+        """
+        Takes a template flag which points to one of the email templates in
+        ./templates.py. Supported email templates and their arguments are:
+
+            Soundtrap
+                MANDATORY ARGUMENTS
+                st_name
+                st_email
+                st_password
+        """
+        for st in students:
+            if template_flag == 'soundtrap':
+
+                if not hasattr(st, 'soundtrap_password'):
+                    raise Exception(
+                        f'Cannot send soundtrap email to {st.name} because they do not have the '
+                        'soundtrap_password attribute.'
+                    )
+                template = Email.soundtrap(st.name, st.email, st.soundtrap_password)
+
+            pg.hotkey('command', 'tab')
+            pc.copy(st.email)
+            pg.press('c')
+            pg.hotkey('command', 'v')
+            pg.press('tab')
+            pc.copy('Your Soundtrap Account is Ready!')
+            pg.press('tab')
+            pg.hotkey('command', 'v')
+            pg.press('tab')
+            pc.copy(template)
+            pg.hotkey('command', 'v')
+            pg.PAUSE = 0.3
+            pg.press('up')
+            pg.press('up')
+            for i in range(12):
+                pg.press('left')
+            pg.hotkey('shift', 'down')
+            pg.PAUSE = 1.4
+            pg.hotkey('command', 'k')
+            input()
+
+        return 0
+
+    def soundtrap_update(self, input_path, output_path, update_path):
+
+        with open(update_path, 'r', encoding='utf-8-sig') as update_in:
+            reader = csv.reader(update_in)
+            next(reader)
+            before_update = [row for row in reader]
+
+        with open(input_path, 'r', encoding='utf-8-sig') as csv_in:
+            read_in = csv.reader(csv_in)
+            next(read_in)
+            names = []
+            for row in read_in:
+                if row[4][0] == 'D':
+                    continue
+                    
+                student_name = row[2] + ' ' + row[3]
+                names.append(student_name)
+
+        students = self.find_nearest_match(names)
+
+        new_accounts = []
+        for st in students:
+            st.soundtrap_password = st.last_name.lower() + st.first_name.lower() + str(randint(10, 99))
+            new_row = [st.first_name, st.last_name, st.email, st.soundtrap_password]
+            if new_row in before_update:
+                continue
+            new_accounts.append(new_row)
+
+        for acc in before_update:
+            acc.append('old')
+
+        for acc in new_accounts:
+            acc.append('new')
+
+        to_dict = {}
+        full_list = before_update + new_accounts
+        for i in full_list:
+            key = i[0] + i[1]
+            to_dict.setdefault(key, i)
+
+        non_dup_old = [i[:-1] for i in to_dict.values() if i[4] == 'old']
+        new_accounts = [i[:-1] for i in to_dict.values() if i[4] == 'new']
+
+        all_accounts = non_dup_old + new_accounts
+        all_accounts.sort()
+        new_accounts.sort()
+
+        with open(output_path, 'w') as output:
+            wr = csv.writer(output)
+            wr.writerow(['First name', 'Last name', 'Email', 'Password'])
+            wr.writerows(new_accounts)
+
+        with open(update_path, 'w') as update:
+            wr = csv.writer(update)
+            wr.writerow(['First name', 'Last name', 'Email', 'Password'])
+            wr.writerows(all_accounts)
+
+        return new_accounts
 
     @classmethod
     def new_school_year(cls, csvdir):
@@ -196,13 +385,16 @@ class Helper:
                 group = Group(name, grade_level, this_students)
                 groups.append(group)
 
+        new_helper = cls(homerooms, students, groups)
+        new_helper.write_cache()
 
-
-        return cls(homerooms, students, groups)
+        return new_helper
 
     @staticmethod
     def get_matching_student(st, students, append_homeroom=None):
         """
+        THE PURPOSE OF THIS FUNCTION is to assist the new_school_year function.
+        Duplicate
         Look through the list of students. Find and return the already parsed
         instance of that student so that they can be linked to this new context.
 
@@ -238,7 +430,7 @@ class Helper:
 
 
     @staticmethod
-    def read_cache():
+    def read_cache(check_date=True):
         """
         This static method returns a class because I like to break the rules.
         there's a reason for the rules; this garbage doesn't work
@@ -247,7 +439,7 @@ class Helper:
             data = db['data']
             date = db['date']
 
-        if datetime.now().month in range(9, 12) and date.month in range(1, 7):
+        if check_date and (datetime.now().month in range(9, 12) and date.month in range(1, 7)):
             raise Exception(
                 'It appears that the cache is from last school year. Please\n'
                 'provide new data, re-instantiate, and re-write cache.'
