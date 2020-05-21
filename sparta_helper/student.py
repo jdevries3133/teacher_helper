@@ -8,7 +8,7 @@ from .genesis import get_session
 class Student:
     def __init__(self, context):
         """
-        Context must include:
+        Context may include:
             first_name
             last_name
             student_id

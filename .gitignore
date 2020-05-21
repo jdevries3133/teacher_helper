@@ -11,3 +11,4 @@ source_data
 tags
 venv
 .vscode/
+.idea/

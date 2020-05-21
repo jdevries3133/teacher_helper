@@ -4,7 +4,7 @@ from datetime import datetime
 import os
 from pathlib import Path
 from random import randint
-import smtplib
+import smtplib, ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import shelve
@@ -47,7 +47,7 @@ class Helper:
                     if st.student_id == row[0]:
                         st.email = row[1]
 
-    def find_nearest_match(self, student_names):
+    def find_nearest_match(self, student_names, debug=False):
         """
         Takes a list of student names, and returns a list of student objects
         from self.students. If there is no exact name match, it will perform a 
@@ -74,7 +74,10 @@ class Helper:
                         u_in = print(name + '\t' + match[0] + '\n')
 
                         while True:
-                            yn = input().lower()
+                            if debug:
+                                yn = 'y'
+                            else:
+                                yn = input().lower()
                             if yn == 'y':
                                 student_names[index] = match[1]
                                 break
@@ -94,7 +97,12 @@ class Helper:
                 print('\nDo these names match? (y/n)\n')
 
                 while True:
-                    u_in = input(name + '\t' + qset[0] + '\n').lower()
+
+                    if debug:
+                        u_in = 'y'
+                    else:
+                        u_in = input(name + '\t' + qset[0] + '\n').lower()
+
                     if u_in == 'y':
                         student_names[index] = [s for s in self.students if s.name == qset[0]][0]
                         break
@@ -204,15 +212,47 @@ class Helper:
                     continue
                     nonparticipator_audit_edpuzzle(file_path, self)
 
-    def stmp_email(self):
-        me = 'john.devries@sparta.org'
-        recipient = 'jdevries3133@gmail.com'
+    def email(self, students, template_flag):
+        if template_flag == 'soundtrap':
 
-        msg = MIMEMultipart('alternative')
-        msg['Subject'] = 'Your Soundtrap Account is Ready!'
-        msg['From'] = me
-        msg['To'] = recipient
-        text, html = Email.soundtrap()
+            no_pass = [s for s in students if not hasattr(s, 'soundtrap_password')]
+            if no_pass:
+                nl = '\n'
+                raise Exception(
+                    f'The following students do not have a password '
+                    f'assigned to them:\n{[(i.name + nl) for i in no_pass]}'
+                )
+
+            # init ssl
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL('smtp.gmail.com', port=465, context=context) as server:
+                server.login(
+                    os.getenv('GMAIL_USERNAME'),
+                    os.getenv('GMAIL_PASSWORD'),
+                )
+
+                for st in students:
+                    me = 'john.devries@sparta.org'
+                    you = st.email
+
+                    msg = MIMEMultipart('alternative')
+                    msg['Subject'] = 'Your Soundtrap Account is Ready!'
+                    msg['From'] = me
+                    msg['To'] = you
+                    text, html = Email.soundtrap(st.first_name, st.email, st.soundtrap_password)
+
+                    part1 = MIMEText(text, 'plain')
+                    part2 = MIMEText(html, 'html')
+
+                    msg.attach(part1)
+                    msg.attach(part2)
+
+                    resp = server.sendmail(me, you, msg.as_string())
+                    print(resp)
+
+        return 0
+                
+
 
 
     def email_students(self, students, template_flag):
@@ -259,7 +299,7 @@ class Helper:
 
         return 0
 
-    def soundtrap_update(self, input_path, output_path, update_path):
+    def soundtrap_update(self, input_path, output_path, update_path, debug=False):
 
         with open(update_path, 'r', encoding='utf-8-sig') as update_in:
             reader = csv.reader(update_in)
@@ -277,7 +317,7 @@ class Helper:
                 student_name = row[2] + ' ' + row[3]
                 names.append(student_name)
 
-        students = self.find_nearest_match(names)
+        students = self.find_nearest_match(names, debug=debug)
 
         new_accounts = []
         for st in students:
@@ -295,28 +335,28 @@ class Helper:
 
         to_dict = {}
         full_list = before_update + new_accounts
-        for i in full_list:
+        for index, i in enumerate(full_list):
             key = i[0] + i[1]
             to_dict.setdefault(key, i)
 
         non_dup_old = [i[:-1] for i in to_dict.values() if i[4] == 'old']
-        new_accounts = [i[:-1] for i in to_dict.values() if i[4] == 'new']
+        non_dup_new = [i[:-1] for i in to_dict.values() if i[4] == 'new']
 
-        all_accounts = non_dup_old + new_accounts
+        all_accounts = non_dup_old + non_dup_new
         all_accounts.sort()
-        new_accounts.sort()
+        non_dup_new.sort()
 
         with open(output_path, 'w') as output:
             wr = csv.writer(output)
             wr.writerow(['First name', 'Last name', 'Email', 'Password'])
-            wr.writerows(new_accounts)
+            wr.writerows(non_dup_new)
 
-        with open(update_path, 'w') as update:
+        with open(Path(update_path.parent, 'soundtrap_updated.csv'), 'w') as update:
             wr = csv.writer(update)
             wr.writerow(['First name', 'Last name', 'Email', 'Password'])
             wr.writerows(all_accounts)
 
-        return new_accounts
+        return students
 
     @classmethod
     def new_school_year(cls, csvdir):

@@ -1,5 +1,6 @@
 from pathlib import Path
 
+
 class Email:
     @staticmethod
     def soundtrap(first_name, email, password):
@@ -17,6 +18,11 @@ class Email:
 
         with open('/Users/JohnDeVries/repos/teacher_helper/sparta_helper/html_email_templates/soundtrap_account_ready.html', 'r') as html_io:
             html = html_io.read()
+
+        html = html.replace('[[first_name]]', first_name)
+        html = html.replace('[[username]]', email)
+        html = html.replace('[[password]]', password)
+
         return plain_text, html
 
 if __name__ == "__main__":
