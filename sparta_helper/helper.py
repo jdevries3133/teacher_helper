@@ -3,7 +3,9 @@ import csv
 from datetime import datetime
 import os
 from pathlib import Path
+import json
 from random import randint
+import re
 import smtplib, ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -69,7 +71,7 @@ class Helper:
                         done = False
 
                         print('-' * 80)
-                        print('\nDo these names match? (y/n)\n')
+                        print('\nDo these names match? (y/n/p) (yes, no, pass)\n')
                         
                         u_in = print(name + '\t' + match[0] + '\n')
 
@@ -84,8 +86,10 @@ class Helper:
                                 done = True
                             elif yn == 'n':
                                 break
+                            elif yn == 'p':
+                                pass
                             else:
-                                print('Please enter ')
+                                print('Please enter y, n, or p')
 
                         if done:
                             break
@@ -94,7 +98,7 @@ class Helper:
             else:
                 qset = process.extractOne(name, [s.name for s in self.students])
                 print('-' * 80)
-                print('\nDo these names match? (y/n)\n')
+                print('\nDo these names match? (y/n/p) (yes, no, pass)\n')
 
                 while True:
 
@@ -107,6 +111,8 @@ class Helper:
                         student_names[index] = [s for s in self.students if s.name == qset[0]][0]
                         break
                     elif u_in == 'n':
+                        break
+                    elif u_in == 'p':
                         break
                     else:
                         print('Please enter "y" or "n."')
@@ -251,54 +257,7 @@ class Helper:
                     print(resp)
 
         return 0
-                
-
-
-
-    def email_students(self, students, template_flag):
-        """
-        Takes a template flag which points to one of the email templates in
-        ./templates.py. Supported email templates and their arguments are:
-
-            Soundtrap
-                MANDATORY ARGUMENTS
-                st_name
-                st_email
-                st_password
-        """
-        for st in students:
-            if template_flag == 'soundtrap':
-
-                if not hasattr(st, 'soundtrap_password'):
-                    raise Exception(
-                        f'Cannot send soundtrap email to {st.name} because they do not have the '
-                        'soundtrap_password attribute.'
-                    )
-                template = Email.soundtrap(st.name, st.email, st.soundtrap_password)
-
-            pg.hotkey('command', 'tab')
-            pc.copy(st.email)
-            pg.press('c')
-            pg.hotkey('command', 'v')
-            pg.press('tab')
-            pc.copy('Your Soundtrap Account is Ready!')
-            pg.press('tab')
-            pg.hotkey('command', 'v')
-            pg.press('tab')
-            pc.copy(template)
-            pg.hotkey('command', 'v')
-            pg.PAUSE = 0.3
-            pg.press('up')
-            pg.press('up')
-            for i in range(12):
-                pg.press('left')
-            pg.hotkey('shift', 'down')
-            pg.PAUSE = 1.4
-            pg.hotkey('command', 'k')
-            input()
-
-        return 0
-
+          
     def soundtrap_update(self, input_path, output_path, update_path, debug=False):
 
         with open(update_path, 'r', encoding='utf-8-sig') as update_in:
@@ -357,6 +316,36 @@ class Helper:
             wr.writerows(all_accounts)
 
         return students
+
+    def from_classroom(self, regex, flag, attribute, classroom_path):
+        """
+        Utility function for getting assignment data or grades from google
+        classrom json repository. Searches flag (assignments, posts, comments)
+        for the regex, and assigns the value of the result to the student as
+        whatever string is passed as atribute.
+
+        classroom_path must be pathlib Path object
+        """
+        submissions = []
+        for path in classroom_path.iterdir():
+            with open(path, 'r') as jsn:
+                obj = json.load(jsn)
+            if flag == "assignment":
+                for post in obj['posts']:
+                    if 'courseWork' in post.keys():
+                        mo = re.fullmatch(regex, post['courseWork']['title'])
+                        if mo:
+                            submissions += post['courseWork']['submissions']
+
+        for submission in submissions:
+            try:
+                submitter = self.find_nearest_match([submission['student']['profile']['name']['fullName']])[0]
+                submitter.__dict__.setdefault(attribute, submission)
+                print(f'set attribute {attribute} on student {submitter.name} for submission\n{submission}\n\n')
+            except IndexError:
+                pass
+
+        return 0
 
     @classmethod
     def new_school_year(cls, csvdir):
