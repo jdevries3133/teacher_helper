@@ -464,7 +464,7 @@ class Helper:
         This static method returns a class because I like to break the rules.
         there's a reason for the rules; this garbage doesn't work
         """
-        with shelve.open('cache', 'r') as db:
+        with shelve.open('/Users/JohnDeVries/repos/teacher_helper/cache', 'r') as db: # todo: refactor so that the cache is written below the base directory of the package, so that I can use relative file paths
             data = db['data']
             date = db['date']
 

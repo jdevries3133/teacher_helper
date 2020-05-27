@@ -1,10 +1,4 @@
-import csv
-import os
-import re
-from pathlib import Path
-
-from sparta_helper import Helper
-
+# Get all the urls attached to a certain assignment
 if __name__ == "yank mixlab":
     helper = Helper.read_cache()
     classrom_path = Path.resolve(Path('.', 'google_classrooms'))
@@ -31,3 +25,5 @@ if __name__ == "yank mixlab":
         wr = csv.writer(csvfile)
         for subm in submissions:
             wr.writerow([subm['name'], subm['link']])
+
+            
