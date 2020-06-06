@@ -4,8 +4,15 @@ from .student import Student
 import os
 from pathlib import Path
 
-if not os.getenv('GENESIS_USERNAME'):
-    print('WARN: "GENESIS_USERNAME" should be a defined environment variable for genesis authentication.')
+env_vars = [
+    'GENESIS_USERNAME',
+    'GENESIS_PASSWORD',
+    'GMAIL_USERNAME',
+    'GMAIL_PASSWORD', 
+ ]
 
-if not os.getenv('GENESIS_PASSWORD'):
-    print('WARN: "GENESIS_PASSWORD" should be a defined environment variable for genesis authentication.')
+for env_var in env_vars:
+    if not os.getenv(env_var):
+        raise Warning(
+            f'Environment variable {env_var} is missing, which is necessary for certain functions within this module.'
+        )

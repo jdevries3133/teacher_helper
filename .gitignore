@@ -1,6 +1,7 @@
 */__pycache__
 *.pyc
-*.db*
+*.db
+*.log
 *.csv
 archive
 edpuzzle

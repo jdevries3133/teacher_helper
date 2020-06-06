@@ -6,14 +6,12 @@ from pathlib import Path
 import json
 from random import randint
 import re
-import smtplib, ssl
+import smtplib
+import ssl
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import shelve
 
-import pyautogui as pg
-import pyperclip as pc
-import pprint
 from fuzzywuzzy import process
 
 from .csv_parsers import (
@@ -26,6 +24,7 @@ from .group import Group
 from .homeroom import Homeroom
 from .templates import Email
 from .student import Student
+
 
 class Helper:
     """
@@ -54,6 +53,9 @@ class Helper:
         Takes a list of student names, and returns a list of student objects
         from self.students. If there is no exact name match, it will perform a 
         fuzzy match and ask the user to resolve the ambiguity in the command line.
+
+        If altTab is true, it will assume this is part of a gui script, and 
+        "command-tab" the user in and out of the input 
         """
         for index, name in enumerate(copy(student_names)):
 
@@ -72,7 +74,7 @@ class Helper:
 
                         print('-' * 80)
                         print('\nDo these names match? (y/n/p) (yes, no, pass)\n')
-                        
+
                         u_in = print(name + '\t' + match[0] + '\n')
 
                         while True:
@@ -122,7 +124,7 @@ class Helper:
                 print(f'{name} was deleted because they had no match.')
                 student_names.remove(name)
 
-        return student_names ## now converted to Student class instances
+        return student_names  # now converted to Student class instances
 
     def resolve_missing_st_ids(self):
         """
@@ -133,8 +135,7 @@ class Helper:
 
         For now, if the user says "n," the student is just deleted. Obviously
         the assumption is that students who are not part of the school are not
-        in any groups. This function must be modified to handle students who are
-        group members that are not students in the school.
+        in any groups. This function must be modified to handle students who are group members that are not students in the school.
         """
 
         st_mis = [s for s in self.students if not s.student_id]

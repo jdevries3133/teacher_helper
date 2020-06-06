@@ -1,0 +1,1 @@
+from .automator import ClassroomAutomator as Automator
