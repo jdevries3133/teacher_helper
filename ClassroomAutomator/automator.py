@@ -5,7 +5,11 @@ import sys
 
 from fuzzywuzzy import process
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import StaleElementReferenceException
 import pyautogui as pg
 import pyperclip as pc
 
@@ -35,6 +39,7 @@ class ClassroomAutomator:
         password_elem.clear()
         password_elem.send_keys(self.password)
         password_elem.send_keys(Keys.RETURN)
+        sleep(1)
 
     def clickthrough_doc(self, scroll_down):
         """
@@ -48,7 +53,7 @@ class ClassroomAutomator:
         pg.PAUSE = 1
         pg.click(x=542, y=432)  # onto next student
         pg.click(x=596, y=161)  # onto next student
-        sleep(2)
+        sleep(0.5)
 
         if scroll_down:
             pg.moveTo(x=1120, y=264)
@@ -66,26 +71,60 @@ class ClassroomAutomator:
             names_and_statuses = (
                 [d.text.split('\n') for d in name_divs if d.get_attribute('aria-checked') == 'true']
             )
-            if len(names_and_statuses) > 1:
+            if len(names_and_statuses[0]) == 2:
+                name, assignment_status = names_and_statuses[0]
+            elif len(names_and_statuses[0]) == 3:
+                name, _, assignment_status = names_and_statuses[0]  # ['name', 'turned in', 'done late']
+            else:
                 raise Exception(
                     'Incorrect pre-concieved-notion error: detected more than one '
                     'currently selected student.'
                 )
-            name, assignment_status = names_and_statuses[0]
+                breakpoint()
 
         except Exception as e:
             print(f'exception {e}')
+            breakpoint()
 
         return name, assignment_status
 
-    def get_assignment_link(self, assignment_name):
+    def get_assignment_link(self, homeroom_url, assignment_name):
         """
         Take assignment name as a string and return the link to that assignment,
         with the presumption that the driver is navigated to the stream of
         a google classroom.
         """
-        anchor_tags = self.driver.find_elements('tag name', 'a')
-        anchor_tag = [a for a in anchor_tags if a.get_attribute('aria-label') == f'Assignment: "{assignment_name}"'][0]
+
+
+        self.driver.get(homeroom_url)
+        sleep(3)
+
+        # another day
+        """
+        try:
+            element = WebDriverWait(self.driver, 10).until(
+                EC.presence_of_element_located((By.LINK_TEXT, f'Assignment: {assignment_name}'))
+            )
+        finally:
+            print('classroom loading took more than ten seconds')
+            self.driver.close()
+        """
+
+
+        while True:
+            try:
+                anchor_tags = self.driver.find_elements('tag name', 'a')
+                anchor_tag = [a for a in anchor_tags if a.get_attribute('aria-label') == f'Assignment: "{assignment_name}"'][0]
+                break
+            except StaleElementReferenceException:
+                print('finding title element taking longer than expected')
+                sleep(1)
+            except IndexError:
+                print('finding title element taking longer than expected')
+                sleep(1)
+            except Exception as e:
+                print(f'unexpected exception: {e}')
+                sleep(1)
         if not anchor_tag:
             pg.hotkey('command', 'tab')
             for tag in anchor_tags:

@@ -1,4 +1,0 @@
-Open classrooms
-Use same gui clickthrough script
-On advance, get student name from 
-
