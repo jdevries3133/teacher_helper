@@ -1,9 +1,7 @@
-import code
 import os
 from time import sleep
 import sys
 
-from fuzzywuzzy import process
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -11,7 +9,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException
 import pyautogui as pg
-import pyperclip as pc
 
 
 class ClassroomAutomator:
@@ -19,17 +16,13 @@ class ClassroomAutomator:
         self.username = username
         self.password = password
         self.driver = webdriver.Firefox()
-
         self.driver.get('https://classroom.google.com/u/1/h')
-
         xpath = '//*[@id="identifierId"]'
         username_elem = self.driver.find_element_by_xpath(xpath)
         username_elem.clear()
         username_elem.send_keys(self.username)
         username_elem.send_keys(Keys.RETURN)
-
         sleep(2.1)
-
         xpath = (
             '/html/body/div[1]/div[1]/div[2]/div/div[2]/div/div/'
             'div[2]/div/div[1]/div/form/span/section/div/div/div[1]/div[1]'

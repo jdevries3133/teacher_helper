@@ -23,6 +23,7 @@ if args[1] == 'student':
     try:
         st = helper.find_nearest_match([query_name])[0]
         pprint(st.__dict__)
+        sys.exit()
     except IndexError:
         print(f'Student {args[2]} was not found.')
         sys.exit()

@@ -1,5 +1,15 @@
-import code
-import csv
+"""
+The script helps with grading in google classroom. It can grade the same assignment
+across multiple classrooms by iterating through homerooms of the appropriate
+grade level. The script uses two constants, assignment name, and grade level.
+It is also necessary to rewrite the comment bank for the given assignment.
+
+Within the __name__ == '__main__' block, you can do many tricky things. For
+example, you can incorporate acknowledgement for student completion of outside
+work. Also, you can assign any attribute on the student object which can be
+accessed later by the comment bank.
+"""
+
 import time
 import os
 
@@ -9,9 +19,7 @@ import pyperclip as pc
 from sparta_helper import Helper
 from ClassroomAutomator import Automator
 
-TASK = 'grading'
-
-def comment_bank(ind, context):
+def comment_bank(ind, st):
     REQUIRED_CONTEXT = [
         'name',
     ]
@@ -20,32 +28,29 @@ def comment_bank(ind, context):
             raise Exception(f'Missing necessary context {item}')
 
     comments = [
-        '',
+        '',  # this comment can be used to acknowledge completion of outside work
 
-        f'Nice job {context["name"]}! I really like the chord progression that '
-        'you used. I hope that you are using what you learned in your composition '
-        'for this week!\n\n'
-        'Here is a sneak peek of the gallery that I am going to '
-        'use to display your compositions after they\'re all turned in this week! '
-        'https://songmakergallery.com/gallery/sample-gallery/',
+        f'Great job {st.first_name}! I hope you are using chord progressions '
+        'this week in for your end-of-year music lab song!',
 
-        f'Oops! {context["name"]}, it looks like you forgot to attach your link '
-        'to this assignment. That is ok, but MAKE SURE you don\'t make the same '
-        'mistake this week! If you do, your composition won\'t end up in our gallery!\n\n'
-        'By the way, here is a sneak peek of what the song maker gallery is going '
-        'to look like! https://songmakergallery.com/gallery/sample-gallery/\n\n',
+        f'Oops! {st.first_name}, it looks like you hit submit but forgot to '
+        'put write anything in this google doc. Make sure you circle back to this, '
+        'otherwise I will never know whether you did anything at all!',
 
-        f'Hey there {context["name"]}, nice job! I like the chord progression '
-        'that you created, and you did a great job following the video and '
-        'completing the assignment.\n\nThis is a nitpicky thing, but I notice that '
-        'you pasted your link into a google doc. Next time, make sure you attach '
-        'your link directly to the assignment. That will be super important to me '
-        'this week so that I can get your composition into the Song Maker Gallery!\n\n'
-        'By the way, here is a sneak peek of what that is going to look like! '
-        'https://songmakergallery.com/gallery/sample-gallery/',
+        f'Oops! {st.first_name}, you were supposed to create your own unique '
+        'four-chord-progression in the arpeggio maker, not chose the song whose '
+        'chord progression was your favorite, although I love the chord progression '
+        'of that song too!\n\nIf you get a chance, come back and make your own '
+        'four-chord-progression like I did in the video, and try your best '
+        'to remember what you learned about chord progressions as you work on '
+        'your end-of-year music lab composition this week!',
 
     ]
-
+    try:
+        comments[ind]
+    except IndexError:
+        print('no matching comment')
+        return ''
     return comments[ind]
 
 def feedback_loop(st):
@@ -60,7 +65,7 @@ def feedback_loop(st):
     while True:
         if st.outside_work:
             print(f'{st.name} did the outside work.')
-            comment = comment_bank(0, {'name': st.first_name})
+            comment = comment_bank(0, st)
             pg.typewrite(comment)
             input()
             pg.hotkey('command', 'tab')
@@ -71,7 +76,11 @@ def feedback_loop(st):
             if inp == 'b':
                 return 'b'
             if inp:
-                comment = comment_bank(int(inp), {'name': st.first_name})
+                try:
+                    int(inp)
+                except ValueError:
+                    return 'c'
+                comment = comment_bank(int(inp), st)
                 pg.hotkey('command', 'tab')
                 time.sleep(0.5)
                 pc.copy(comment)
@@ -88,20 +97,20 @@ def feedback_loop(st):
 def return_work(assignment_name, grade_level: str):
     username = os.getenv('GMAIL_USERNAME')
     password = os.getenv('GMAIL_PASSWORD')
-
     helper = Helper.read_cache()
     automator = Automator(username, password)
-
     homerooms = [hr for hr in helper.homerooms if hr.grade_level == grade_level]
-    for hr in homerooms:
+    for index, hr in enumerate(homerooms):
+        print(('*' * 30), f'{index} of {len(homerooms)} homerooms complete', ('*' * 30))
         url = automator.get_assignment_link(hr.url, assignment_name)
         url = url.split('/')
         url = f'https://classroom.google.com/c/{url[5]}/a/{url[6]}/submissions/by-status/and-sort-name/all'
         automator.driver.get(url)
         input()
         pg.hotkey('command', 'tab')
+    automator.driver.close()
 
-def assignment_feedback_loop(helper, assignment_name, grade_level: str):
+def assignment_feedback_loop(helper, assignment_name, grade_level: str, scroll=0):
     """
     Assignment name must be exactly correct, case sensitive. There is no error
     handling.
@@ -114,32 +123,40 @@ def assignment_feedback_loop(helper, assignment_name, grade_level: str):
                 'before passing them to the feedback loop. If there is no outside '
                 'work, set every student to false first.'
             )
-
     username = os.getenv('GMAIL_USERNAME')
     password = os.getenv('GMAIL_PASSWORD')
-
     automator = Automator(username, password)
     homerooms = [hr for hr in helper.homerooms if hr.grade_level == grade_level]
     for hr in homerooms:
-
-        # get assgt url from assgt name string
+        print(('*' * 30), f'{index} of {len(homerooms)} homerooms complete', ('*' * 30))
         url = automator.get_assignment_link(hr.url, assignment_name)
         automator.driver.get(url)
-
-        # iterate through students and give feedback break on input of 'b'
-        # passed to the feedback_loop function
         for _ in range(len(hr.students)):
-            student_name, assignment_status = automator.clickthrough_doc(0)
+            try:
+                student_name, assignment_status = automator.clickthrough_doc(scroll)
+            except Exception as e:
+                print(f'Unhandled exception: {e}')
+                continue
             st = helper.find_nearest_match([student_name])[0]
             msg = feedback_loop(st)
             if msg == 'b':
                 break
+    automator.driver.close()
 
 if __name__ == "__main__":
     if TASK == 'return':
-        return_work('Chords in the Song Maker', '5')
+        return_work('Mixlab!', '4')
     if TASK == 'grade':
         helper = Helper.read_cache()
         for st in helper.students:
             st.outside_work = False
-        assignment_feedback_loop(helper, 'Chords in the Song Maker', '5')
+        assignment_feedback_loop(
+            helper,
+            'Chords, Arpeggios, Chord Progressions, and Harmony',
+            '5',
+            scroll=50
+        )
+        return_work(
+            'Chords, Arpeggios, Chord Progressions, and Harmony',
+            '5'
+        )

@@ -19,6 +19,7 @@ from .csv_parsers import (
     parse_group,
     nonparticipator_audit_flipgrid,
 )
+from .docx_utils import regex_search
 from .json_parsers import assignment_participation_audit
 from .group import Group
 from .homeroom import Homeroom
@@ -41,12 +42,49 @@ class Helper:
             db['date'] = datetime.now()
 
     def read_emails_from_csv(self, path):
+        """
+        depricated, replaced by decent new_school_year that gets emails and
+        keeps them.
+        """
         with open(path, 'r') as csvfile:
             rd = csv.reader(csvfile)
             for row in rd:
                 for st in self.students:
                     if st.student_id == row[0]:
                         st.email = row[1]
+
+    def get_regex_classroom_doc(self, doc_dir, regex, yes=False, bad_link_regex=r''):
+        """
+        Iterate through a list of word documents downloaded from google classroom.
+        The assumption is that docs will follow the naming convention where the student's
+        full name is the start of the filename, followed by a dash.
+
+        Optionally, it can also take a bad link regex which will pull out bad links,
+        so that you can follow up with students who pasted partial links.
+
+        Returns a list of tuples of the student name paired with the regex match
+        string or None.
+        """
+        matched_links = []
+        bad_links = []
+        for doc in Path.resolve(Path(doc_dir)).iterdir():
+            if doc.name[-4:] != 'docx':
+                continue
+            student_name = doc.name[:doc.name.index('-')-1]
+            st = self.find_nearest_match([student_name], debug=yes)[0]
+            if not st:
+                while True:
+                    student_name = input('Type in the name exactly to get a good match')
+                    st = self.find_nearest_match([student_name], debug=yes)[0]
+                    if st:
+                        break
+            matches, misses = regex_search(st, doc, regex, near_match_regex=bad_link_regex)
+            matched_links += matches
+            if misses:
+                bad_links += misses
+        if bad_link_regex:
+            return matched_links, bad_links
+        return matched_links
 
     def find_nearest_match(self, student_names, debug=False):
         """
