@@ -44,11 +44,49 @@ Write self to the cache as db['data']. This is run automatically after new_schoo
 so that in the future, you can use the staticmethod read_cache() anytime. Re-run
 write_cache() anytime data is out-of-date.
 
-### read_emails_from_csv(self)
+### get_regex_classroom_doc(self, doc_dir, regex, yes=False, bad_link_regex=r'')
 
-Depricated method that can assign a csv of names and emails to students. This
-is from before read_cache() was working properly, but maybe still helpeful in
-some instances.
+Iterate through a list of word documents downloaded from google classroom.
+The assumption is that docs will follow the naming convention where the student's
+full name is the start of the filename, followed by a dash. Optionally, it can
+also take a bad link regex which will pull out bad links, so that you can follow
+up with students who pasted partial links. Returns a list of tuples of the
+student name paired with the regex match string or None. If a `bad_link_regex` is
+supplied, the function returns two list of tuples, first `matched_links`, then
+`bad_links`.
+
+### match_assgt_with_students(self, context)
+
+Iterates through each homeroom and all google classroom json objects, and sets
+the `assignments` attribute on each student; which is itself a list of
+`AssignmentSubmission` objects (class defined in `sparta_helper/assignment_submissions.py`).
+
+Importantly, this function needs quite a but of context to know where to look for
+all this edpuzzle and flipgrid assignment information. Required keys for context
+are:
+
+- `flipgrid_assignments`
+- `edpuzzle_assignments`
+- `epoch_cutoff`
+
+#### Flipgrid and Edpuzzle Assignments
+
+Should point to a list of tuples:
+`(ASSGT_NAME, CSV_PATH)`
+The assignment name must exactly match the google classroom assignment name,
+and the path should point to the csv file of data from flipgrid/edpuzzle so that
+the data can be aggregated into the output of the function.
+
+#### Epoch Cutoff
+
+Assignments from before this timestamp will be ignored.
+
+### write_assignments_to_workbook(self, output_path)
+
+Once the above function has been run, all students will have an assignment
+attribute. This function produces a report in excel with color-coded cells, which
+is convenient for analyzing and transferring the data, such as for posting grades
+or preparing progress reports.
 
 ### find_nearest_match(self, student_names)
 

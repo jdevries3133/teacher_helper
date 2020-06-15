@@ -19,32 +19,26 @@ import pyperclip as pc
 from sparta_helper import Helper
 from ClassroomAutomator import Automator
 
+ASSIGNMENT_NAME = 'Reverse, Reverse!'
+GRADE_LEVEL = '5'
+GOOGLE_DOC_SCROLL = 200
+
 def comment_bank(ind, st):
-    REQUIRED_CONTEXT = [
-        'name',
-    ]
-    for item in REQUIRED_CONTEXT:
-        if item not in context.keys():
-            raise Exception(f'Missing necessary context {item}')
 
     comments = [
         '',  # this comment can be used to acknowledge completion of outside work
 
-        f'Great job {st.first_name}! I hope you are using chord progressions '
-        'this week in for your end-of-year music lab song!',
+        f'Awesome job {st.first_name}! I know that this assignment was extremely '
+        'difficult — more difficult than I intended, and I\'m sorry for that! '
+        'However, I can see that you gave this assignment your best shot, and '
+        'you did a really good job!\n\nHave a great week, and thanks for your '
+        'hard work in music throughout the craziness of the past months!',
 
-        f'Oops! {st.first_name}, it looks like you hit submit but forgot to '
-        'put write anything in this google doc. Make sure you circle back to this, '
-        'otherwise I will never know whether you did anything at all!',
-
-        f'Oops! {st.first_name}, you were supposed to create your own unique '
-        'four-chord-progression in the arpeggio maker, not chose the song whose '
-        'chord progression was your favorite, although I love the chord progression '
-        'of that song too!\n\nIf you get a chance, come back and make your own '
-        'four-chord-progression like I did in the video, and try your best '
-        'to remember what you learned about chord progressions as you work on '
-        'your end-of-year music lab composition this week!',
-
+        f'Wow {st.first_name}, this assignment was super difficult and you '
+        'nailed it, amazing job! I\'m sorry that this assignment was so tricky, '
+        'but I can see that you rose to the occasion. Have a great week, and '
+        'thank you for your hard work in music class throughout the craziness '
+        'of the past months!'
     ]
     try:
         comments[ind]
@@ -110,7 +104,7 @@ def return_work(assignment_name, grade_level: str):
         pg.hotkey('command', 'tab')
     automator.driver.close()
 
-def assignment_feedback_loop(helper, assignment_name, grade_level: str, scroll=0):
+def assignment_feedback_loop(helper, assignment_name, grade_level: str, scroll=0, start_on=0):
     """
     Assignment name must be exactly correct, case sensitive. There is no error
     handling.
@@ -127,7 +121,9 @@ def assignment_feedback_loop(helper, assignment_name, grade_level: str, scroll=0
     password = os.getenv('GMAIL_PASSWORD')
     automator = Automator(username, password)
     homerooms = [hr for hr in helper.homerooms if hr.grade_level == grade_level]
-    for hr in homerooms:
+    for index, hr in enumerate(homerooms):
+        if index <= start_on:
+            continue
         print(('*' * 30), f'{index} of {len(homerooms)} homerooms complete', ('*' * 30))
         url = automator.get_assignment_link(hr.url, assignment_name)
         automator.driver.get(url)
@@ -144,19 +140,16 @@ def assignment_feedback_loop(helper, assignment_name, grade_level: str, scroll=0
     automator.driver.close()
 
 if __name__ == "__main__":
-    if TASK == 'return':
-        return_work('Mixlab!', '4')
-    if TASK == 'grade':
-        helper = Helper.read_cache()
-        for st in helper.students:
-            st.outside_work = False
-        assignment_feedback_loop(
-            helper,
-            'Chords, Arpeggios, Chord Progressions, and Harmony',
-            '5',
-            scroll=50
-        )
-        return_work(
-            'Chords, Arpeggios, Chord Progressions, and Harmony',
-            '5'
-        )
+    helper = Helper.read_cache()
+    for st in helper.students:
+        st.outside_work = False
+    assignment_feedback_loop(
+        helper,
+        ASSIGNMENT_NAME,
+        GRADE_LEVEL,
+        GOOGLE_DOC_SCROLL,
+    )
+    return_work(
+        ASSIGNMENT_NAME,
+        GRADE_LEVEL,
+    )

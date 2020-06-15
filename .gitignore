@@ -3,6 +3,7 @@
 *.db
 *.log
 *.csv
+*.xlsx
 archive
 edpuzzle
 google_classrooms

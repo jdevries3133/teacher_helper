@@ -1,6 +1,7 @@
 from copy import copy
 import csv
 from datetime import datetime
+import logging
 import os
 from pathlib import Path
 import json
@@ -12,8 +13,15 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import shelve
 
+from openpyxl import Workbook
+from openpyxl.styles import PatternFill
 from fuzzywuzzy import process
 
+from .assignment_submissions import (
+    AssignmentSubmission,
+    EdpuzzleSubmission,
+    FlipgridSubmission
+)
 from .csv_parsers import (
     parse_homeroom,
     parse_group,
@@ -40,18 +48,6 @@ class Helper:
         with shelve.open('cache', 'c') as db:
             db['data'] = self
             db['date'] = datetime.now()
-
-    def read_emails_from_csv(self, path):
-        """
-        depricated, replaced by decent new_school_year that gets emails and
-        keeps them.
-        """
-        with open(path, 'r') as csvfile:
-            rd = csv.reader(csvfile)
-            for row in rd:
-                for st in self.students:
-                    if st.student_id == row[0]:
-                        st.email = row[1]
 
     def get_regex_classroom_doc(self, doc_dir, regex, yes=False, bad_link_regex=r''):
         """
@@ -86,6 +82,132 @@ class Helper:
             return matched_links, bad_links
         return matched_links
 
+    def match_assgt_with_students(self, context):
+        """
+        This function needs a good amount of context:
+        'flipgrid_assignments' and 'edpuzzle_assignments':
+            Lists of tuples. Each item should be the assignment name and the
+            path to the csv of data from edpuzzle or flipgrid which will ultimately
+            be sent to the constructors for their corresponding AssignmentSubmission
+            objects.
+        'epoch_cutoff': integer -- epoch timestamp before which assignments will be ignored.
+        """
+        # expect 
+        FLIPGRID_ASSIGNMENTS = [i[0] for i in context['flipgrid_assignments']]
+        EDPUZZLE_ASSIGNMENTS = [i[0] for i in context['edpuzzle_assignments']]
+        EPOCH_CUTOFF_TIME = context['epoch_cutoff']
+        for st in helper.students:
+            st.assignments = {}
+        # assign json paths as attributes of homeroom teachers
+        for homeroom in Path('google_classrooms').iterdir():
+            if homeroom.name.startswith('.'):
+                continue
+            teacher_name = homeroom.name.split('-')[0].strip()
+            if 'Mohawk' in teacher_name:
+                for hr in [h for h in helper.homerooms if h.grade_level == '3']:
+                    hr.json = homeroom
+                continue
+            try:
+                teacher = [hr for hr in helper.homerooms if hr.teacher == teacher_name][0]
+            except:
+                breakpoint()
+            teacher.json = homeroom
+        # iterate through google classroom objects
+        assignments = set()
+        for hr_json in Path('google_classrooms').iterdir():
+            with open(hr_json, 'r') as jsn:
+                gc_data = json.load(jsn)
+                for post in gc_data['posts']:
+                    post_epoch = datetime.strptime(post['creationTime'], '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+                    if post_epoch < EPOCH_CUTOFF_TIME:
+                        continue
+                    try:
+                        post['courseWork']['submissions']
+                    except KeyError:
+                        try:
+                            post['courseWork']
+                            logging.error(f'Post with coursework has no submission attached\n\t{post}["courseWork"]')
+                            continue
+                        except KeyError:
+                            continue
+                    assignment_title = post['courseWork']['title']
+                    assignments.add(assignment_title)
+                    # at this point, it is certain that the current post is an assignment,
+                    # which includes coursework submissions.
+                    for submission in post['courseWork']['submissions']:
+                        try:
+                            student_name = submission['student']['profile']['name']['fullName']
+                            st = helper.find_nearest_match([student_name], debug=True)[0]
+                            # switch based on assignment type
+                            if assignment_title in FLIPGRID_ASSIGNMENTS:
+                                subm = FlipgridSubmission(assignment_title, submission, st)
+                                st.assignments.setdefault(subm.title, subm)
+                            elif assignment_title in EDPUZZLE_ASSIGNMENTS:
+                                subm = EdpuzzleSubmission(assignment_title, submission, st)
+                                st.assignments.setdefault(subm.title, subm)
+                            else:
+                                subm = AssignmentSubmission(assignment_title, submission)
+                                st.assignments.setdefault(subm.title, subm)
+                        except KeyError:
+                            logging.debug(f'Not a coursework post: {submission}')
+                            continue
+                        if not 'comments' in submission:
+                            continue
+                        for comment in submission['comments']:
+                            subm.acknowledge_comment(comment)
+
+    def write_assignments_to_workbook(self, output_path):
+            """
+            Students must have the attribute st.assignment; a list of AssignmentSubmission
+            objects, or a subclass of AssignmentSubmission.
+            """
+        OUT = Workbook()
+        OUT.remove(OUT.active)
+        for hr in self.homerooms:
+            sheet = OUT.create_sheet(title=hr.teacher)
+            sheet.append(['First Name', 'Last Name'])
+            hr.students.sort(key=lambda e: e.last_name)
+            for st in hr.students:
+                sheet.append([st.first_name, st.last_name])
+            class_assignments = set()
+            [class_assignments.update(st.assignments) for st in hr.students]
+            for index, assignment_name in enumerate(class_assignments):
+                column = index + 3
+                sheet.cell(1, column).value = assignment_name
+                for i, st in enumerate(hr.students):
+                    try:
+                        assignment_status = st.assignments[assignment_name].status
+                    except KeyError:
+                        assignment_status = 0
+                    colors = [
+                        'fc0303',  # red
+                        'fcf403',  # yellow
+                        '0398fc',  # orange
+                        '93f542',  # lightgreen
+                        '18fc03',  # green
+                    ]
+                    cell = sheet.cell(i+2, column)
+                    cell.value = assignment_status
+                    cell.fill = PatternFill(
+                        start_color=colors[assignment_status],
+                        end_color=colors[assignment_status],
+                        fill_type='solid'
+                    )
+            average_column = sheet.max_column + 1
+            sheet.cell(1, average_column).value = 'Avg'
+            for row in range(2, sheet.max_row+1):
+                values = []
+                for column in range(1, sheet.max_column):
+                    cell = sheet.cell(row+1, column+1)
+                    if column >= 3:
+                        if sheet.cell(row, column).value:
+                            values.append(sheet.cell(row, column).value)
+                        else:
+                            values.append(0)
+                average = sum(values) / len(values)
+                sheet.cell(row, average_column).value = average
+        OUT.save(filename=output_path)
+
     def find_nearest_match(self, student_names, debug=False):
         """
         Takes a list of student names, and returns a list of student objects
@@ -96,25 +218,20 @@ class Helper:
         "command-tab" the user in and out of the input 
         """
         for index, name in enumerate(copy(student_names)):
-
             # direct match(es)
             matches = [(s.name, s) for s in self.students if s.name == name]
             if matches:
-
                 # single direct match
                 if len(matches) == 1:
                     student_names[index] = matches[0][1]
-
                 # multiple matches
                 else:
                     for match in matches:
                         done = False
-
-                        print('-' * 80)
-                        print('\nDo these names match? (y/n/p) (yes, no, pass)\n')
-
-                        u_in = print(name + '\t' + match[0] + '\n')
-
+                        if not debug:
+                            print('-' * 80)
+                            print('\nDo these names match? (y/n/p) (yes, no, pass)\n')
+                            print(name + '\t' + match[0] + '\n')
                         while True:
                             if debug:
                                 yn = 'y'
@@ -130,23 +247,19 @@ class Helper:
                                 pass
                             else:
                                 print('Please enter y, n, or p')
-
                         if done:
                             break
-
             # no match
             else:
                 qset = process.extractOne(name, [s.name for s in self.students])
-                print('-' * 80)
-                print('\nDo these names match? (y/n/p) (yes, no, pass)\n')
-
+                if not debug:
+                    print('-' * 80)
+                    print('\nDo these names match? (y/n/p) (yes, no, pass)\n')
                 while True:
-
                     if debug:
                         u_in = 'y'
                     else:
                         u_in = input(name + '\t' + qset[0] + '\n').lower()
-
                     if u_in == 'y':
                         student_names[index] = [s for s in self.students if s.name == qset[0]][0]
                         break
@@ -156,12 +269,10 @@ class Helper:
                         break
                     else:
                         print('Please enter "y" or "n."')
-
         for name in copy(student_names):
             if not isinstance(name, Student):
                 print(f'{name} was deleted because they had no match.')
                 student_names.remove(name)
-
         return student_names  # now converted to Student class instances
 
     def resolve_missing_st_ids(self):
