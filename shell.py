@@ -16,8 +16,11 @@ if '-h' in sys.argv or 'help' in sys.argv:
     """)
 
 args = sys.argv + [(''*10)]  # avoid index errors
-
-helper = Helper.read_cache()
+if Helper.cache_exists():
+    helper = Helper.read_cache()
+else:
+    print('Error: Database does not exist.\nHelper object must be cached to use the shell')
+    sys.exit()
 if args[1] == 'student':
     query_name = ' '.join(args[2:])
     try:

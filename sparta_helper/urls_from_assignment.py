@@ -10,7 +10,7 @@ import re
 good_regex = re.compile(r'http(s)*://musiclab\.chromeexperiments\.com/[s|S]ong-[m|M]aker/song/(\d){16}')
 near_match_regex = re.compile(r'musiclab\.chromeexperiments')
 
-def regex_search_docx_dir(good_regex, near_match_regex, directory):
+def regex_search_docx_path(good_regex, near_match_regex, directory):
     helper = Helper.read_cache()
     matches, misses = helper.get_regex_classroom_doc(Path.resolve(Path('docs')), good_regex, yes=True, bad_link_regex=near_match_regex)
     with open('out.csv', 'w') as csvfile:
@@ -24,7 +24,7 @@ def regex_search_docx_dir(good_regex, near_match_regex, directory):
         for _ in misses:
             wr.writerow(_)
 
-def get_url_from_classroom_json():
+def get_url_from_classroom_json(helper):
     """
     If you want to use this again, refactor the code to take arguments. This is
     currently only written as a script.
@@ -39,8 +39,10 @@ def get_url_from_classroom_json():
             st.media = False
         else:
             st.media = True
-    for classroom in Path.resolve(Path('smg_links')).iterdir():
-        homeroom_teacher = classroom.name[:classroom.name.index('-')-1]
+    for classroom in Path('google_classrooms').iterdir():
+        if 'mohawk' in classroom.name.lower():
+            continue
+        homeroom_teacher = classroom.name.split('-')[0]
         print(homeroom_teacher)
         with open(classroom, 'r') as jsn:
             cls_obj = json.load(jsn)
@@ -50,7 +52,8 @@ def get_url_from_classroom_json():
                 hr = hr[0]
                 break
             else:
-                homeroom_teacher = input()
+                print(hr)
+                breakpoint()
         for post in cls_obj['posts']:
             if 'courseWork' in post:
                 if post['courseWork']['title'] == 'Make a Song for the Song Maker Gallery!!':
@@ -115,3 +118,7 @@ def get_url_from_classroom_json():
     with open(Path('near_match.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(near_match)
+
+if __name__ == '__main__':
+    for i in Path('docs').iterdir():
+        regex_search_docx_path(good_regex, near_match_regex, Path('docs'))

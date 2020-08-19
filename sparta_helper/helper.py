@@ -1,6 +1,7 @@
 from copy import copy
 import csv
 from datetime import datetime
+import dbm
 import logging
 import os
 from pathlib import Path
@@ -33,6 +34,8 @@ from .group import Group
 from .homeroom import Homeroom
 from .templates import Email
 from .student import Student
+
+MODULE_DIR = os.path.dirname(__file__)
 
 
 class Helper:
@@ -157,10 +160,10 @@ class Helper:
                             subm.acknowledge_comment(comment)
 
     def write_assignments_to_workbook(self, output_path):
-            """
-            Students must have the attribute st.assignment; a list of AssignmentSubmission
-            objects, or a subclass of AssignmentSubmission.
-            """
+        """
+        Students must have the attribute st.assignment; a list of AssignmentSubmission
+        objects, or a subclass of AssignmentSubmission.
+        """
         OUT = Workbook()
         OUT.remove(OUT.active)
         for hr in self.homerooms:
@@ -507,17 +510,12 @@ class Helper:
         homerooms = []
         students = []
         groups = []
-
-
         # deal with all homerooms, pass over groups
         for filename in os.listdir(csvdir):
-
             # skip .DS_store and other nonsense
             if '.csv' not in filename:
                 continue
-
             path_to_csv = Path(csvdir, filename)
-
             # call parsing functions
             if path_to_csv.stem[0] == 'h':
                 teacher, grade_level, this_students = parse_homeroom(path_to_csv)
@@ -528,29 +526,21 @@ class Helper:
                         this_students.append(match)
                     else:
                         students.append(st)
-
                 homeroom = Homeroom(teacher, grade_level, this_students)
                 homerooms.append(homeroom)
                 print('homeroom', homeroom.teacher, 'has', str(len(homeroom.students)), 'students')
-
             elif path_to_csv.stem[0] == 'g':
                 # deal with groups once all the homerooms are done to help
                 # with the duplicate student problem
                 continue
-
             else:
                 raise Exception(f'Unable to parse file: {filename}')
-
         for filename in os.listdir(csvdir):
-
             # skip .DS_store and other nonsense
             if '.csv' not in filename:
                 continue
-
             path_to_csv = Path(csvdir, filename)
-
             if path_to_csv.stem[0] == 'g':
-
                 name, grade_level, this_students = parse_group(path_to_csv)
                 for st in copy(this_students):
                     if st.name in [s.name for s in students]:
@@ -560,13 +550,10 @@ class Helper:
                         this_students.append(match)
                     else:
                         students.append(st)
-
                 group = Group(name, grade_level, this_students)
                 groups.append(group)
-
         new_helper = cls(homerooms, students, groups)
         new_helper.write_cache()
-
         return new_helper
 
     @staticmethod
@@ -614,7 +601,7 @@ class Helper:
         This static method returns a class because I like to break the rules.
         there's a reason for the rules; this garbage doesn't work
         """
-        with shelve.open('/Users/JohnDeVries/repos/teacher_helper/cache', 'r') as db: # todo: refactor so that the cache is written below the base directory of the package, so that I can use relative file paths
+        with shelve.open(os.path.join(MODULE_DIR, 'cache'), 'r') as db: # todo: refactor so that the cache is written below the base directory of the package, so that I can use relative file paths
             data = db['data']
             date = db['date']
 
@@ -626,6 +613,10 @@ class Helper:
 
         return data
 
-
-
-
+    @staticmethod
+    def cache_exists():
+        try:
+            shelve.open(os.path.join(MODULE_DIR, 'cache'), 'r')
+            return True
+        except dbm.error:
+            return False

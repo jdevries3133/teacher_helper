@@ -8,7 +8,7 @@ from .meta_groups import MetaGroup
 from .student import Student
 
 class Homeroom(MetaGroup):
-    def __init__(self, teacher, grade_level, students):
+    def __init__(self, teacher, grade_level, students, name):
         """
         Ensure that string constants for csv headers of id, student names, and
         (if applicable) student emails are correct.
@@ -16,3 +16,4 @@ class Homeroom(MetaGroup):
         self.teacher = teacher
         self.grade_level = grade_level
         self.students = students
+        self.name = name  # for Empowerment, the college name

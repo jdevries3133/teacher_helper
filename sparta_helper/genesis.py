@@ -4,7 +4,7 @@ import requests
 
 def get_session():
     """
-    Make a session, and log in
+    Make a session and log in.
     """
     session = requests.Session()
     session.get('https://genesis.sparta.org/sparta/sis/view?gohome=true')

@@ -16,7 +16,7 @@ import os
 import pyautogui as pg
 import pyperclip as pc
 
-from sparta_helper import Helper
+from helper import Helper
 from ClassroomAutomator import Automator
 
 ASSIGNMENT_NAME = 'Reverse, Reverse!'

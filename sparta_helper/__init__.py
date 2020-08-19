@@ -4,15 +4,16 @@ from .student import Student
 import os
 from pathlib import Path
 
-env_vars = [
+REQUIRED_VARS = [
     'GENESIS_USERNAME',
     'GENESIS_PASSWORD',
     'GMAIL_USERNAME',
     'GMAIL_PASSWORD', 
  ]
 
-for env_var in env_vars:
-    if not os.getenv(env_var):
+for var in REQUIRED_VARS:
+    if not os.getenv(var):
         raise Warning(
-            f'Environment variable {env_var} is missing, which is necessary for certain functions within this module.'
+            f'Environment variable {env_var} is missing, which is necessary for '
+            'certain functions within this module.'
         )

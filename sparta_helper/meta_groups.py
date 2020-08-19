@@ -1,13 +1,12 @@
-"""
-Because both the homeroom and groups should have an add to classroom function,
-and I am starting to regret not making an abstract base class.
-"""
 from time import sleep
-
 import pyautogui as pg
 
 
 class MetaGroup:
+    """
+    There are currently separate classes for homerooms and extracurricular
+    activities. This meta class contains methods that apply to any type of group.
+    """
     def __init__(self):
         pass
 
