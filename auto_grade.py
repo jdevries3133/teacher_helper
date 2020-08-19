@@ -17,7 +17,7 @@ import pyautogui as pg
 import pyperclip as pc
 
 from helper import Helper
-from ClassroomAutomator import Automator
+from helper.ClassroomAutomator import Automator
 
 ASSIGNMENT_NAME = 'Reverse, Reverse!'
 GRADE_LEVEL = '5'

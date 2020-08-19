@@ -47,14 +47,15 @@ class ClassroomAutomator:
         pg.click(x=542, y=432)  # onto next student
         pg.click(x=596, y=161)  # onto next student
         sleep(0.5)
-
         if scroll_down:
             pg.moveTo(x=1120, y=264)
             pg.dragTo(x=1120, y=(scroll_down + 264), button='left')
-
         # make comment
         pg.click(x=1285, y=406)
 
+        return self.get_current_student_name_and_status()
+
+    def get_current_student_name_and_status(self):
         try:
             # identify name and assignment status of currently selected student
             name_divs = self.driver.find_elements(
@@ -74,11 +75,9 @@ class ClassroomAutomator:
                     'currently selected student.'
                 )
                 breakpoint()
-
         except Exception as e:
             print(f'exception {e}')
             breakpoint()
-
         return name, assignment_status
 
     def get_assignment_link(self, homeroom_url, assignment_name):
@@ -87,8 +86,6 @@ class ClassroomAutomator:
         with the presumption that the driver is navigated to the stream of
         a google classroom.
         """
-
-
         self.driver.get(homeroom_url)
         sleep(3)
 
@@ -102,8 +99,6 @@ class ClassroomAutomator:
             print('classroom loading took more than ten seconds')
             self.driver.close()
         """
-
-
         while True:
             try:
                 anchor_tags = self.driver.find_elements('tag name', 'a')
