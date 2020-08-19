@@ -2,7 +2,7 @@
 import code
 import sys
 from pprint import pprint
-from sparta_helper import Helper
+from helper import Helper
 
 if '-h' in sys.argv or 'help' in sys.argv:
     print("""
