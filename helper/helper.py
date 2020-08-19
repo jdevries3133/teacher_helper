@@ -32,7 +32,7 @@ from .docx_utils import regex_search
 from .json_parsers import assignment_participation_audit
 from .group import Group
 from .homeroom import Homeroom
-from .templates import Email
+from .templates import soundtrap as soundtrap_template
 from .student import Student
 
 MODULE_DIR = os.path.dirname(__file__)
@@ -40,7 +40,7 @@ MODULE_DIR = os.path.dirname(__file__)
 
 class Helper:
     """
-    A helper module that drives the entire module! See README.md
+    Driver for the entire module! See README.md
     """
     def __init__(self, homerooms=None, students=None, groups=None):
         self.homerooms = homerooms
@@ -398,7 +398,7 @@ class Helper:
                     msg['Subject'] = 'Your Soundtrap Account is Ready!'
                     msg['From'] = me
                     msg['To'] = you
-                    text, html = Email.soundtrap(st.first_name, st.email, st.soundtrap_password)
+                    text, html = Email.soundtrap_template(st.first_name, st.email, st.soundtrap_password)
 
                     part1 = MIMEText(text, 'plain')
                     part2 = MIMEText(html, 'html')
