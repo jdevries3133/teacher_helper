@@ -9,4 +9,3 @@ pcx = Paychex(
     os.getenv('PAYCHEX_PASS')
 )
 pcx.login()
-pcx.driver.close()
