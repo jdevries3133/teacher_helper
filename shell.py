@@ -46,5 +46,6 @@ if args[1] == 'clock':
         os.getenv('PAYCHEX_PASS')
     )
     pcx.clock()
+    sys.exit()
 
 code.interact(local=locals())

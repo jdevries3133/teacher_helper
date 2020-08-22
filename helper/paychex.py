@@ -5,9 +5,11 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
 
 
 CLOCK_STATE_FILE = os.path.join(os.path.dirname(__file__), 'paychex_clock_state.txt')
+CHROME_DRIVER_PATH = os.path.join(os.path.dirname(__file__), 'chromedriver')
 
 
 def login_first(func):
@@ -33,10 +35,14 @@ class Paychex:
     def __init__(self, username, password):
         self.username = username
         self.password = password
-        self.driver = webdriver.Firefox()
         self.is_logged_in = False
         self.clock_state_file = CLOCK_STATE_FILE
         self.clock_state = self.get_clock_state()
+        # init chrome driver
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--window-size=1440x789')
+        self.driver = webdriver.Chrome(options=chrome_options)
 
     def clock(self):
         """
@@ -88,7 +94,7 @@ class Paychex:
         # reset frame
         self.driver.switch_to.default_content()
         self.is_logged_in = True
-        self.set_clock_state()
+        self.set_clock_state(self._read_site_state())
         return 0
 
     @login_first
@@ -105,7 +111,7 @@ class Paychex:
         if site_state == 'out':
             new_state = self._toggle_clock()
         self.set_clock_state(new_state)
-        input('Clock in successful\nPress enter to close browser.')
+        print('Clock in successful')
         self.driver.close()
 
     @login_first
@@ -122,7 +128,7 @@ class Paychex:
         if site_state == 'in':
             new_state = self._toggle_clock()
         self.set_clock_state(new_state)
-
+        print('Clock out successful')
         self.driver.close()
     
     def get_clock_state(self):
@@ -133,10 +139,9 @@ class Paychex:
         """
         return self._read_cached_state()
 
-    @login_first
-    def set_clock_state(self):
+    def set_clock_state(self, state):
         """
-        Reads site state, updates txt file, and updates self attribute.
+        Sets local state and self attribute to new state
         """
         state = self._read_site_state()
         self.new_state = state
