@@ -1,11 +1,14 @@
 from datetime import datetime
 import os
+from time import sleep
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+
+from .imap import Imap
 
 
 CLOCK_STATE_FILE = os.path.join(os.path.dirname(__file__), 'paychex_clock_state.txt')
@@ -63,11 +66,13 @@ class Paychex:
             choice = None
             while not choice == 'in' or not choice == 'out':
                 choice = input('Would you like to clock in or out?\n')
+                if choice == 'in':
+                    self.clock_in()
+                    break
+                else:
+                    self.clock_out()
+                    break
                 print('Enter "in" or "out"\n')
-            if choice == 'in':
-                self.clock_in()
-            else:
-                self.clock_out()
 
     def login(self):
         """
@@ -78,18 +83,26 @@ class Paychex:
             self.driver.find_element_by_name('login')
         ))
         # username
-        username_input = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, "USER")))
+        username_input = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.ID, "USER")))
         username_input.send_keys(self.username)
         self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[2]/div[2]/div[1]/div/form/div/div[2]/div[2]/button').click()
         # 2-Factor Auth (may not be necessary)
         try:
-            two_factor_auth_input = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="otpCode"]')))
-            two_factor_auth_input.send_keys(input('Enter text verification code.\n'))
+            two_factor_auth_input = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="otpCode"]')))
+            sleep(10)
+            try:
+                otp = Imap(
+                    os.getenv('GMAIL_USERNAME'),
+                    os.getenv('GMAIL_PASSWORD'),
+                ).get_paychex_otp()
+            except:
+                otp = input('Enter text verification code.\n')
+            two_factor_auth_input.send_keys(otp)
             self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div/div/form/div[2]/div/div/button[2]').click()
         except:
             pass
         # password
-        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.NAME, "PASSWORD"))).send_keys(self.password)
+        WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.NAME, "PASSWORD"))).send_keys(self.password)
         self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div/div/div/div/form/div[1]/div[2]/div[2]/button[2]').click()
         # reset frame
         self.driver.switch_to.default_content()

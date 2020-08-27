@@ -13,7 +13,7 @@ def soundtrap(first_name, email, password):
         '\n\nhttps://drive.google.com/open?id=1ZxxnYHUbDEh7XI8Pa_42plrDjAzpIjRW\n\nHave fun!!'
     )
 
-    with open('/Users/JohnDeVries/repos/teacher_helper/sparta_helper/html_email_templates/soundtrap_account_ready.html', 'r') as html_io:
+    with open(Path(__file__, 'html_email_templates', 'soundtrap.html'), 'r') as html_io:
         html = html_io.read()
 
     html = html.replace('[[first_name]]', first_name)
