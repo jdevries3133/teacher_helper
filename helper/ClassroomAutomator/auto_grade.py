@@ -4,7 +4,7 @@ across multiple classrooms by iterating through homerooms of the appropriate
 grade level. The script uses two constants, assignment name, and grade level.
 It is also necessary to rewrite the comment bank for the given assignment.
 
-Within the __name__ == '__main__' block, you can do many tricky things. For
+Within the main() function, you can do many tricky things. For
 example, you can incorporate acknowledgement for student completion of outside
 work. Also, you can assign any attribute on the student object which can be
 accessed later by the comment bank.
@@ -24,9 +24,8 @@ GRADE_LEVEL = '5'
 GOOGLE_DOC_SCROLL = 200
 
 def comment_bank(ind, st):
-
     comments = [
-        '',  # this comment can be used to acknowledge completion of outside work
+        '',  # this comment is reserved for acknowlegement of outside work
 
         f'Awesome job {st.first_name}! I know that this assignment was extremely '
         'difficult — more difficult than I intended, and I\'m sorry for that! '
@@ -41,11 +40,10 @@ def comment_bank(ind, st):
         'of the past months!'
     ]
     try:
-        comments[ind]
+        return comments[ind]
     except IndexError:
         print('no matching comment')
         return ''
-    return comments[ind]
 
 def feedback_loop(st):
     """
@@ -139,8 +137,7 @@ def assignment_feedback_loop(helper, assignment_name, grade_level: str, scroll=0
                 break
     automator.driver.close()
 
-if __name__ == "__main__":
-    helper = Helper.read_cache()
+def main(helper, ASSIGNMENT_NAME, GRADE_LEVEL, GOOGLE_DOC_SCROLL=0):
     for st in helper.students:
         st.outside_work = False
     assignment_feedback_loop(
@@ -153,3 +150,7 @@ if __name__ == "__main__":
         ASSIGNMENT_NAME,
         GRADE_LEVEL,
     )
+
+if __name__ == "__main__":
+    helper = Helper.read_cache()
+    main(helper, ASSIGNMENT_NAME, GRADE_LEVEL, GOOGLE_DOC_SCROLL)
