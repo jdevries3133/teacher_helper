@@ -1,4 +1,10 @@
 """
+
+THIS IS A SCRIPT.
+It has no easily importable functionality and will not until I refactor it into
+a class. I am pretty sure that in it's current location, it will not work at all.
+
+
 The script helps with grading in google classroom. It can grade the same assignment
 across multiple classrooms by iterating through homerooms of the appropriate
 grade level. The script uses two constants, assignment name, and grade level.

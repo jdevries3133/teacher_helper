@@ -8,7 +8,7 @@ from helper import Helper
 
 def check_cache():
     if Helper.cache_exists():
-        helper = Helper.read_cache()
+        return Helper.read_cache()
     else:
         print('Error: Database does not exist.\nHelper object must be cached to use the shell')
         sys.exit()
@@ -28,7 +28,7 @@ args = sys.argv + [(''*10)]  # avoid index errors
 
 # student search
 if args[1] == 'student':
-    check_cache()
+    helper = check_cache()
     query_name = ' '.join(args[2:])
     try:
         st = helper.find_nearest_match([query_name])[0]
@@ -48,4 +48,12 @@ if args[1] == 'clock':
     pcx.clock()
     sys.exit()
 
+if args[1] == 'debug':
+    # code block to run during debugging and working on the module
+    from helper.zoom import ZoomAttendance
+    zm = ZoomAttendance()
+    zm.take_attendance()
+    sys.exit()
+
+helper = check_cache()
 code.interact(local=locals())
