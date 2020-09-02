@@ -1,5 +1,4 @@
 from pathlib import Path
 from helper import Helper
 
-path = Path('.', 'data.pdf')
-helper = Helper.new_school_year(path)
+helper = Helper.new_school_year(Path('.', 'data.pdf'))

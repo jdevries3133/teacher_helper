@@ -12,7 +12,10 @@ from .HelperMixins.end_of_school_year import EndOfSchoolYearMixin
 MODULE_DIR = os.path.dirname(__file__)
 
 
-class Helper(EndOfSchoolYearMixin):
+class Helper(
+        EndOfSchoolYearMixin,
+        OnCourseMixin
+    ):
     """
     Driver for the entire module! See README.md
     """

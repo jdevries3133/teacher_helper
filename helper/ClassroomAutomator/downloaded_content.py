@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from ..docx_utils import regex_search
@@ -49,6 +50,12 @@ class DownloadedContent:
         whatever string is passed as atribute.
 
         classroom_path must be pathlib Path object
+
+        RETURNS a dictionary as follows:
+        {'student_name': [
+            submissions
+        ]}
+        Dict keys are the student's name as it appears in google classroom.
         """
         submissions = []
         for path in classroom_path.iterdir():
@@ -60,11 +67,11 @@ class DownloadedContent:
                         mo = re.fullmatch(regex, post['courseWork']['title'])
                         if mo:
                             submissions += post['courseWork']['submissions']
+        output = {}
         for submission in submissions:
-            try:
-                submitter = self.find_nearest_match([submission['student']['profile']['name']['fullName']])[0]
-                submitter.__dict__.setdefault(attribute, submission)
-                print(f'set attribute {attribute} on student {submitter.name} for submission\n{submission}\n\n')
-            except IndexError:
-                pass
-        return 0
+            submitter = submission['student']['profile']['name']['fullName']
+            if submitter not in output:
+                output[submitter] = [submisson]
+            else:
+                output[submitter].append(submission)
+        return output
