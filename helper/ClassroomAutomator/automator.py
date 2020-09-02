@@ -10,6 +10,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException
 import pyautogui as pg
 
+from .downloaded_content_mixin import DownloadedContentMixin
+
 
 class ClassroomAutomator:
     def __init__(self, username, password):

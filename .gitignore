@@ -4,6 +4,7 @@
 *.log
 *.csv
 *.xlsx
+*.pdf
 archive
 edpuzzle
 google_classrooms

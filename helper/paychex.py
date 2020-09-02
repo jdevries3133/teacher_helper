@@ -204,7 +204,7 @@ class Paychex:
             raise Exception(
                 'Cannot read site before login'
             )
-        status = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="employeeStatus"]'))).text
+        status = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="employeeStatus"]'))).text
         if status == 'Clocked Out':
             return 'out'
         elif 'Working since' in status:
