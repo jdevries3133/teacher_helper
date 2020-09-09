@@ -1,1 +1,1 @@
-from .zoom import ZoomAttendance
+from .zoom import Zoom

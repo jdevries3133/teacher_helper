@@ -1,6 +1,7 @@
 import os
 import pyautogui as pg
 
+
 class ZoomUtilsMixin:
     """
     Basic manipulations of the Zoom UI. These methods are encapsulated into
@@ -14,16 +15,32 @@ class ZoomUtilsMixin:
         self.is_participant_window_open = False
         pass
 
-    def get_participant_window_position(self):
-        needleImage = os.path.join(os.path.dirname(__file__), 'assets', 'small.png')
+    def find_participant_window(self):
+        top_image = os.path.join(
+            os.path.dirname(__file__),
+            'assets',
+            'participant_window_top.png',
+        )
+        bottom_image = os.path.join(
+            os.path.dirname(__file__),
+            'assets',
+            'participant_window_bottom.png',
+        )
         try:
-            res = pg.locateCenterOnScreen(needleImage)
-        except:
-            # image not found on screen; particpant window attribute is out of sync
-            # with reality
+            top = pg.locateCenterOnScreen(top_image)
+            bottom = pg.locateCenterOnScreen(bottom_image)
+        except pg.ImageNotFoundException:
+            # image not found on screen; particpant window attribute is out of
+            # sync with reality
             self._toogle_participant_window()
             self.is_participant_window_open = not self.is_participant_window_open
-            res = pg.locateCenterOnScreen()
+            try:
+                top = pg.locateCenterOnScreen(top_image)
+                bottom = pg.locateCenterOnScreen(bottom_image)
+            except pg.ImageNotFoundException:
+                raise Exception("Cannot find Zoom participation window")
+        breakpoint()
+
         return self._fix_point(res)
 
     def toggle_participation_window(self):
@@ -33,7 +50,9 @@ class ZoomUtilsMixin:
 
     def _fix_point(self, point):
         """
-        Points have a scaling issue on my mac. The values need to be divided by two.
+        Points have a scaling issue on my mac. The values need to be divided by
+        two.
         """
-        # TODO add a check for operating system, because I think this only needs to be done on mac.
+        # TODO add a check for operating system, because I think this only
+        # needs to be done on mac.
         return ((point.x // 2), (point.y // 2))

@@ -7,7 +7,10 @@ import shelve
 from fuzzywuzzy import process
 
 from .student import Student
-from .HelperMixins.end_of_school_year import EndOfSchoolYearMixin
+from .HelperMixins import (
+    EndOfSchoolYearMixin,
+    OnCourseMixin
+)
 
 MODULE_DIR = os.path.dirname(__file__)
 
@@ -30,7 +33,7 @@ class Helper(
             db['data'] = self
             db['date'] = datetime.now()
 
-    def find_nearest_match(self, student_names, auto_yes=False **kwargs):
+    def find_nearest_match(self, student_names, auto_yes=False, **kwargs):
         """
         Takes a list of student names, and returns a list of student objects
         from self.students. If there is no exact name match, it will perform a 
@@ -40,8 +43,8 @@ class Helper(
         "command-tab" the user in and out of the input 
         """
         # deprication compatibility
-        if 'auto_yes' in kwargs:
-            auto_yes = kwargs['auto_yes']
+        if 'debug' in kwargs:
+            auto_yes = kwargs['debug']
         for index, name in enumerate(copy(student_names)):
             # direct match(es)
             matches = [(s.name, s) for s in self.students if s.name == name]

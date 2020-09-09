@@ -152,7 +152,8 @@ class Paychex:
         """
         return self._read_cached_state()
 
-    def set_clock_state(self, state):
+    @login_first
+    def set_clock_state(self):
         """
         Sets local state and self attribute to new state
         """

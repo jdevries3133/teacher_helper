@@ -16,7 +16,7 @@ from ..csv_parsers import (
 from ..json_parsers import assignment_participation_audit
 
 class EndOfSchoolYearMixin:
-    def __init__(self, homerooms, students, goups):
+    def __init__(self, homerooms=None, students=None, groups=None):
         self.homerooms = homerooms
         self.students = students
         self.groups = groups

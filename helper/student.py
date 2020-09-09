@@ -1,10 +1,6 @@
 import csv
 import os
 
-from bs4 import BeautifulSoup
-
-from .genesis import get_session
-
 class Student:
     def __init__(self, context):
         """
@@ -22,16 +18,12 @@ class Student:
             'homeroom',
             'grade_level',
             'groups',
-            'email'
+            'email',
+            'guardians'
         ]
         context.setdefault('groups', [])
+        context.setdefault('guardians', [])
         for key in need_defaults:
             context.setdefault(key, None)
-        self.first_name = context['first_name']
-        self.last_name = context['last_name']
+            self.__setattr__(key, context[key])
         self.name = self.first_name + ' ' + self.last_name
-        self.student_id = context['student_id']
-        self.homeroom = context['homeroom']
-        self.grade_level = context['grade_level']
-        self.groups = context['groups']
-        self.email = context['email']

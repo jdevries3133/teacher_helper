@@ -5,8 +5,6 @@ import os
 from pathlib import Path
 
 REQUIRED_VARS = [
-    'GENESIS_USERNAME',
-    'GENESIS_PASSWORD',
     'GMAIL_USERNAME',
     'GMAIL_PASSWORD', 
  ]
