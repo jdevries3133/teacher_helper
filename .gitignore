@@ -18,3 +18,5 @@ venv
 .idea/
 docs
 smg_links
+helper/ClassroomAutomator/tests/mock_assets/classwork.html
+helper/ClassroomAutomator/tests/mock_assets/home.html

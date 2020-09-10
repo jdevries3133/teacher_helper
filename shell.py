@@ -17,11 +17,18 @@ if '-h' in sys.argv or 'help' in sys.argv:
     print("""
     Supported commands:
 
-    student [name]
-        puts the nearest match into locals() with the variable name "st"). No
-        need to wrap the student name in a string, just pass the name as
-        command line arguments. Helper will look for the nearest match and you
-        two can work together on it :)
+    student [name] (-v)
+        Pretty prints the dictionary of the matching student. If verbose, also
+        print the dict of the students' guardians.
+
+    clock
+        Automatically clocks in or out of Paychex, depending on time of day
+        and previous clock state.
+
+    [no arguments]
+        Run this script with no arguments, and it will enter the shell mode.
+        Here, the helper object is instantiated in the local namespace with
+        the variable name "helper". All attributes and methods are accessible.
     """)
 
 args = sys.argv + [(''*10)]  # avoid index errors
@@ -33,6 +40,10 @@ if args[1] == 'student':
     try:
         st = helper.find_nearest_match([query_name])[0]
         pprint(st.__dict__)
+        if '-v' in args:
+            for gu in st.guardians:
+                print('\n--\n')
+                pprint(gu.__dict__)
         sys.exit()
     except IndexError:
         print(f'Student {args[2]} was not found.')
@@ -41,18 +52,10 @@ if args[1] == 'student':
 # auto clock in / out
 if args[1] == 'clock':
     from helper.paychex import Paychex
-    pcx = Paychex(
-        os.getenv('PAYCHEX_USR'),
-        os.getenv('PAYCHEX_PASS')
-    )
-    pcx.clock()
-    sys.exit()
-
-if args[1] == 'debug':
-    # code block to run during debugging and working on the module
-    from helper.zoom import ZoomAttendance
-    zm = ZoomAttendance()
-    zm.take_attendance()
+    u = os.getenv('PAYCHEX_USR'),  # username
+    p = os.getenv('PAYCHEX_PASS')  # password
+    with Paychex(u, p) as pcx:
+        pcx.clock()
     sys.exit()
 
 helper = check_cache()

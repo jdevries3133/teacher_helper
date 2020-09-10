@@ -1,8 +1,82 @@
 # Helper.do_stuff
 
-## Work in Progress
+## Top-Level `shell.py`
 
-In the midst of major refactor. The code is the documentation.
+The idea is to alias this file to something easy to remember on your machine.
+It exposes some of the module's functionality as a command line utility. Note
+that you will need to update the shebang on the first line to point to the
+correct interpreter on your machine.
+
+### Setup Tutorial (OS X or Linux)
+
+1. Allow `shell.py` to be executed directly.
+
+   `chmod +x shell.py`
+
+2. Add a convenient alias to `shell.py` in your ~/.bashrc file.
+
+   `echo "export [your alias name]="path/to/`shell.py`" >> ~/.bashrc`
+
+3. Instantiate the Helper class and call the `write_cache()` method. This cache will be used for shell utilities. See <a href="#helper">helper section</a> for details on instantiaiton.
+
+### Utilities
+
+`python shell.py student [name] (-v)`
+
+Pretty prints the dictionary of the matching student. If verbose, also
+print the dict of the students' guardians.
+
+`python shell.py clock`
+Automatically clocks in or out of Paychex, depending on time of day
+and previous clock state.
+
+`python shell.py` (no arguments)
+Run this script with no arguments, and it will enter the shell mode.
+Here, the helper object is instantiated in the local namespace with
+the variable name "helper". All attributes and methods are accessible.
+
+   <h1 id="helper">from helper import Helper</h1>
+
+A class that encapsulates homerooms, students, extracurricular groups, and parent contacts.
+
+### helper.new_school_year(cls, student_data, guardian_data)
+
+Class method inherited from `helper/HelperMixins/oncourse_mixin.py`. The student_data csv should have the following columns in the following order:
+
+- first name
+- last name
+- grade level
+- homeroom
+- email
+
+The guardian_data csv should have the following columns in the following order:
+
+- first name
+- last name
+- student
+- primary contact
+- email
+- mobile phone
+- home phone
+- work phone
+- comments
+- allow contact
+- student resides with
+- relationship to student
+
+These reports can be easily exported from OnCourse, and by passing them into this function, the helper class will be fully instantiated.
+
+## Helper Class Methods
+
+### find_nearest_match(self, student_names)
+
+Takes a list of student names and returns a list of Student instances which
+are a part of self.students(). Asks for the user's help in the command line unless
+a single perfect match is found. Manipulations to these students will cascade.
+
+<br />
+
+# Paychex
 
 ## from helper.paychex import Paychex
 

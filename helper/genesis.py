@@ -1,4 +1,5 @@
 import os
+import csv
 
 import requests
 
@@ -30,6 +31,34 @@ def get_session():
 class SpartaHelper(helper):
     """
     Helper methods that were only relevant in sparta.
+
+    ## Helper.new_school_year()
+
+    ### Naming convention for source data
+
+    Source data must be named in a specific way. A filename should consist of three
+    specific parts:
+
+    ```
+    [flag (-h or -g)] [grade level] [name (of teacher or group)]
+    ```
+
+    For example,
+
+    ```
+    -h3Masterson.csv
+    ```
+
+    A "-h" and "-g" flags tells the program to parse students as homerooms or groups,
+    respectively. Homerooms have more academic-related methods, like automatically
+    following up on missing grades, whereas groups should be used for extracurricular
+    or sports groups. They include methods appropriate to those cases.
+
+    The csv for groups must contain a header row `name` to parse student names. Homerooms
+    should also have the header row `id`. The module automatically tries to match
+    group students with their matching homeroom instance, and to merge them. There
+    are various duplicate reconciliation functions, but they should be merged into
+    a single function executed during new_school_year instantiation.
     """
     def __init__(self, homerooms, students, groups):
         super().__init__(homerooms, students, groups)
