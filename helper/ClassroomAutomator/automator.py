@@ -50,6 +50,19 @@ class ClassroomAutomator:
             )
         self.current_view = 'home'
 
+    def enforce_view(func):
+        """
+        Requires the driver to be in a particular view before the function is
+        called. If the driver is not in the passed in view, it will navigate
+        to it with the self.navigate_to(view) function.
+        """
+        def wrapper(*args):
+            breakpoint()
+            if args[0].current_view != args[1]:
+                args[0].navigate_to(args[1])
+            func(args)
+        return wrapper
+
     def navigate_to(self, view, *args, **kwargs):
         """
         Navigate to a particular classroom view.
@@ -84,7 +97,7 @@ class ClassroomAutomator:
                     'passed as a keyword argument'
                 )
 
-    @enforce_view('classroom')
+    # @enforce_view('classroom')
     def _open_materials_tab(self):
 
         url_validation_regex = (
@@ -100,6 +113,7 @@ class ClassroomAutomator:
             f'https://classroom.google.com/u/{self.user_url_param}/w/{self.class_id}'
         )
 
+
     @classmethod
     def map_class_id_to_class_name(cls, username, password):
         """
@@ -107,16 +121,3 @@ class ClassroomAutomator:
         class ids mapped to the class's names.
         """
         pass
-
-    @staticmethod
-    def enforce_view(func):
-        """
-        Requires the driver to be in a particular view before the function is
-        called. If the driver is not in the passed in view, it will navigate
-        to it with the self.navigate_to(view) function.
-        """
-        def wrapper(*args):
-            if args[0].current_view != args[1]:
-                self.navigate_to(args[1])
-            func(*args)
-            return wrapper

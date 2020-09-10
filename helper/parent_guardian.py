@@ -36,3 +36,4 @@ class ParentGuardian:
                     'Phone number should be of type int.'
                 )
         # assignment of utility attributes
+        self.name = self.first_name + ' ' + self.last_name

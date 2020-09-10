@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 import re
 
 from selenium import webdriver
@@ -12,7 +12,7 @@ import pyautogui as pg
 from .automator import ClassroomAutomator
 
 
-class FeedbackAutomator(ClassroomAutomator):
+class FeedbackAutomator(ClassroomAutomator, ABC):
     def __init__(self, username, password, assignment_name: str, classroom_names: list):
         super().__init__(username, password)
         self.assignment_name = assignment_name
@@ -23,3 +23,6 @@ class FeedbackAutomator(ClassroomAutomator):
             self.navigate_to('classroom', classroom_name=classroom)
             breakpoint()
 
+    @abstractmethod
+    def assess(self):
+        pass

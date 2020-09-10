@@ -7,7 +7,11 @@ from helper.ClassroomAutomator import FeedbackAutomator
 # helper.write_cache()
 helper = Helper.read_cache()
 
-atm = FeedbackAutomator(
+class MyAutomator(FeedbackAutomator):
+    def assess(self):
+        pass
+
+atm = MyAutomator(
     os.getenv('GMAIL_USERNAME'),
     os.getenv('GMAIL_PASSWORD_RAW'),
     'Wednesday 9/9 Attendance Question',
@@ -15,3 +19,5 @@ atm = FeedbackAutomator(
         'Geltzeiler_HR_4B',
     ),
 )
+atm.loop()
+atm.driver.close()
