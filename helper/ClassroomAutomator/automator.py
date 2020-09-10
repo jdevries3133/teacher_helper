@@ -7,10 +7,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import StaleElementReferenceException
+from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
 import pyautogui as pg
 
-from .downloaded_content_mixin import DownloadedContentMixin
+from .exceptions import (
+    InvalidViewError,
+)
 
 
 class ClassroomAutomator:
@@ -34,112 +36,87 @@ class ClassroomAutomator:
         password_elem.clear()
         password_elem.send_keys(self.password)
         password_elem.send_keys(Keys.RETURN)
-        sleep(1)
-
-    def clickthrough_doc(self, scroll_down):
-        """
-        scroll_down is an integer that determines how for down the doc it will
-        scroll to show only critical information.
-
-        Returns student name and assignment status. NOTE: This will always leave
-        the cursor in the comment box, so other pyautogui things can be done
-        afterwards.
-        """
-        pg.PAUSE = 1
-        pg.click(x=542, y=432)  # onto next student
-        pg.click(x=596, y=161)  # onto next student
-        sleep(0.5)
-        if scroll_down:
-            pg.moveTo(x=1120, y=264)
-            pg.dragTo(x=1120, y=(scroll_down + 264), button='left')
-        # make comment
-        pg.click(x=1285, y=406)
-
-        return self.get_current_student_name_and_status()
-
-    def get_current_student_name_and_status(self):
         try:
-            # identify name and assignment status of currently selected student
-            name_divs = self.driver.find_elements(
-                'xpath',
-                '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[1]/div/div[1]/div[1]/*',
+            WebDriverWait(self.driver, 20).until(
+                lambda driver: 'https://classroom.google.com' in driver.current_url
             )
-            names_and_statuses = (
-                [d.text.split('\n') for d in name_divs if d.get_attribute('aria-checked') == 'true']
+        except TimeoutException:
+            input(
+                'Complete two factor auth challenge, then press enter to '
+                'continue.'
             )
-            if len(names_and_statuses[0]) == 2:
-                name, assignment_status = names_and_statuses[0]
-            elif len(names_and_statuses[0]) == 3:
-                name, _, assignment_status = names_and_statuses[0]  # ['name', 'turned in', 'done late']
-            else:
-                raise Exception(
-                    'Incorrect pre-concieved-notion error: detected more than one '
-                    'currently selected student.'
-                )
-                breakpoint()
-        except Exception as e:
-            print(f'exception {e}')
+            WebDriverWait(self.driver, 20).until(
+                lambda driver: 'https://classroom.google.com' in driver.current_url
+            )
+        self.current_view = 'home'
+
+    def navigate_to(self, view, *args, **kwargs):
+        """
+        Navigate to a particular classroom view.
+        """
+        # only accept valid views
+        self._validate_view(view, *args, **kwargs)
+        if view == 'home':
+            self.driver.get('https://classroom.google.com/')
+        if view == 'classroom':
+            if self.current_view != 'home':
+                self.navigate_to('home')
+            class_name = kwargs['classroom_name']
             breakpoint()
-        return name, assignment_status
 
-    def get_assignment_link(self, homeroom_url, assignment_name):
+    def _validate_view(self, view, *args, **kwargs):
         """
-        Take assignment name as a string and return the link to that assignment,
-        with the presumption that the driver is navigated to the stream of
-        a google classroom.
+        Argument validation logic for self.navigate_to() method.
         """
-        self.driver.get(homeroom_url)
-        sleep(3)
-
-        # another day
-        """
-        try:
-            element = WebDriverWait(self.driver, 10).until(
-                EC.presence_of_element_located((By.LINK_TEXT, f'Assignment: {assignment_name}'))
+        if view not in [
+            'home',
+            'classroom',
+        ]:
+            raise InvalidViewError(
+                f'{view} is not a valid view.'
             )
-        finally:
-            print('classroom loading took more than ten seconds')
-            self.driver.close()
-        """
-        while True:
+        if view == 'classroom':
             try:
-                anchor_tags = self.driver.find_elements('tag name', 'a')
-                anchor_tag = [a for a in anchor_tags if a.get_attribute('aria-label') == f'Assignment: "{assignment_name}"'][0]
-                break
-            except StaleElementReferenceException:
-                print('finding title element taking longer than expected')
-                sleep(1)
-            except IndexError:
-                print('finding title element taking longer than expected')
-                sleep(1)
-            except Exception as e:
-                print(f'unexpected exception: {e}')
-                sleep(1)
-        if not anchor_tag:
-            pg.hotkey('command', 'tab')
-            for tag in anchor_tags:
-                try:
-                    arr = tag.get_attribute('aria-label').split('"')
-                except AttributeError:
-                    print('Attribute error on tag')
-                    return None
-                    continue
-                if 'Assignment' in arr[0]:
-                    inp = input(
-                        f'Could not find an exact match for the assignment '
-                        f'"{assignment_name}." Did you mean {arr[1]}? (y/n)'
-                    )
-                    if inp == 'y':
-                        anchor_tag = [a for a in anchor_tags if a.get_attribute('aria-label') == f'Assignment: "{arr[1]}"'][0]
-                        break
+                name = kwargs['classroom_name']
+            except KeyError:
+                raise InvalidViewError(
+                    'To navigate to a classroom view, classroom_name must be'
+                    'passed as a keyword argument'
+                )
 
-        if not anchor_tag:
-            # user or program did not identify a match
-            print('exiting because link was not found')
-            self.driver.close()
-            sys.exit()
-        
-        root_href = anchor_tag.get_attribute('href')
-        ext = root_href.split('/')
-        processed_href = f'https://classroom.google.com/g/tg/{ext[4]}/{ext[6]}'
-        return processed_href
+    @enforce_view('classroom')
+    def _open_materials_tab(self):
+
+        url_validation_regex = (
+            re.compile(r'https://classroom.google.com/u/(\d)/(c|w|r)/(\w{16})')
+        )
+        mo = re.search(
+            url_validation_regex,
+            driver.current_url
+        )
+        self.user_url_pararm = mo[1]
+        self.class_id = mo[3]
+        self.driver.get(
+            f'https://classroom.google.com/u/{self.user_url_param}/w/{self.class_id}'
+        )
+
+    @classmethod
+    def map_class_id_to_class_name(cls, username, password):
+        """
+        For methods that access class ids, this instantiates the object with
+        class ids mapped to the class's names.
+        """
+        pass
+
+    @staticmethod
+    def enforce_view(func):
+        """
+        Requires the driver to be in a particular view before the function is
+        called. If the driver is not in the passed in view, it will navigate
+        to it with the self.navigate_to(view) function.
+        """
+        def wrapper(*args):
+            if args[0].current_view != args[1]:
+                self.navigate_to(args[1])
+            func(*args)
+            return wrapper

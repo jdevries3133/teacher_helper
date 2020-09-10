@@ -27,9 +27,10 @@ class Helper(
         self.homerooms = homerooms
         self.students = students
         self.groups = groups
+        self.cache_dir = os.path.join(__file__, 'cache')
 
     def write_cache(self):
-        with shelve.open('cache', 'c') as db:
+        with shelve.open(os.path.join(MODULE_DIR, 'cache'), 'c') as db:
             db['data'] = self
             db['date'] = datetime.now()
 
@@ -103,44 +104,6 @@ class Helper(
                 student_names.remove(name)
         return student_names  # now converted to Student class instances
 
-    def resolve_missing_st_ids(self):
-        """
-        Iterate through students who have no student ID. Perform a fuzzy match
-        on the pool of students, and ask the user if it is a match. No-ID case
-        often arises if a group list is imported with nicknames. Often, student
-        ID's are critical for LMS endpoints.
-
-        For now, if the user says "n," the student is just deleted. Obviously
-        the assumption is that students who are not part of the school are not
-        in any groups. This function must be modified to handle students who are group members that are not students in the school.
-        """
-        st_mis = [s for s in self.students if not s.student_id]
-        good_sts = [s for s in self.students if s.student_id]
-        for st in st_mis:
-            qset = process.extractOne(st.name, [s.name for s in good_sts])
-            print('\nDo these names match? (y/n)\n')
-            u_in = input(st.name + '\t' + qset[0] + '\n').lower()
-            while True:
-                if u_in == 'y':
-                    st_good = [s for s in good_sts if s.name == qset[0]][0]
-                    st.student_id = st_good.student_id
-                    st.name = st_good.name
-                    st.__dict__.setdefault('homeroom', st_good.homeroom)
-                    break
-                # delete the student; if they have no id-bearing match,
-                # they probably moved away
-                if u_in == 'n':
-                    self.students.remove(st)
-                    break
-                # only accept "y" or "n"
-                else:
-                    print('Please enter "y" or "n"')
-        # make sure that every student now has an ID; critical for genesis
-        # API endpoints.
-        if [s for s in self.students if not s.student_id]:
-            raise Exception("Didn't handle all missing student id's")
-        return self.students
-    
     @staticmethod
     def read_cache(check_date=True):
         """
@@ -150,13 +113,11 @@ class Helper(
         with shelve.open(os.path.join(MODULE_DIR, 'cache'), 'r') as db: # todo: refactor so that the cache is written below the base directory of the package, so that I can use relative file paths
             data = db['data']
             date = db['date']
-
         if check_date and (datetime.now().month in range(9, 12) and date.month in range(1, 7)):
             raise Exception(
                 'It appears that the cache is from last school year. Please\n'
                 'provide new data, re-instantiate, and re-write cache.'
             )
-
         return data
 
     @staticmethod

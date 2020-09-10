@@ -11,7 +11,6 @@ from ..assignment_submissions import (
 from ..csv_parsers import (
     parse_homeroom,
     parse_group,
-    nonparticipator_audit_flipgrid,
 )
 from ..json_parsers import assignment_participation_audit
 

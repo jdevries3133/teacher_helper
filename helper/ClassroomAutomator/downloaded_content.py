@@ -13,7 +13,6 @@ class DownloadedContent:
         if not isinstance(directory, Path):
             raise ValueError('Directory must be pathlib path object.')
         self.directory = directory
-        pass
 
     def get_regex_classroom_doc(self, regex, yes=False, bad_link_regex=r''):
         """
@@ -29,7 +28,7 @@ class DownloadedContent:
         """
         matched_links = []
         bad_links = []
-        for doc in self.path.iterdir():
+        for doc in self.directory.iterdir():
             if doc.name[-4:] != 'docx':
                 continue
             student_name = doc.name[:doc.name.index('-')-1]
@@ -41,8 +40,8 @@ class DownloadedContent:
             return matched_links, bad_links
         return matched_links
 
-    
-    def from_classroom(self, regex, flag, attribute, classroom_path):
+    @staticmethod
+    def from_classroom(regex, flag, attribute, classroom_path):
         """
         Utility function for getting assignment data or grades from google
         classrom json repository. Searches flag (assignments, posts, comments)

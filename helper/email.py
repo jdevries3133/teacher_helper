@@ -11,7 +11,6 @@ class Email:
 
     def email(self, students, template_flag):
         if template_flag == 'soundtrap':
-
             no_pass = [s for s in students if not hasattr(s, 'soundtrap_password')]
             if no_pass:
                 nl = '\n'
@@ -19,7 +18,6 @@ class Email:
                     f'The following students do not have a password '
                     f'assigned to them:\n{[(i.name + nl) for i in no_pass]}'
                 )
-
             # init ssl
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL('smtp.gmail.com', port=465, context=context) as server:
@@ -27,23 +25,18 @@ class Email:
                     os.getenv('GMAIL_USERNAME'),
                     os.getenv('GMAIL_PASSWORD'),
                 )
-
                 for st in students:
                     me = 'john.devries@sparta.org'
                     you = st.email
-
                     msg = MIMEMultipart('alternative')
                     msg['Subject'] = 'Your Soundtrap Account is Ready!'
                     msg['From'] = me
                     msg['To'] = you
                     text, html = Email.soundtrap_template(st.first_name, st.email, st.soundtrap_password)
-
                     part1 = MIMEText(text, 'plain')
                     part2 = MIMEText(html, 'html')
-
                     msg.attach(part1)
                     msg.attach(part2)
-
                     resp = server.sendmail(me, you, msg.as_string())
                     print(resp)
         return 0

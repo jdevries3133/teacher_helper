@@ -16,7 +16,6 @@ def get_session():
             f'"GENESIS_USERNAME and GENESIS_PASSWORD must be defined environment variables for '
             'genesis authentication.'
         )
-
     request = requests.Request(
         'POST',
         'https://genesis.sparta.org/sparta/sis/j_security_check',
@@ -26,7 +25,6 @@ def get_session():
         },
     )
     session.send(request.prepare())
-
     return session
 
 class SpartaHelper(helper):
