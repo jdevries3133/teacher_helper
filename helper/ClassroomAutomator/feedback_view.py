@@ -29,6 +29,7 @@ class FeedbackAutomator(ClassroomAutomator, ABC):
     def loop(self):
         for classroom in self.classroom_names:
             self.navigate_to('classwork', classroom_name=classroom)
+            self.navigate_to('assignment_feedback', assignment_name=self.assignment_name)
             breakpoint()
 
     @abstractmethod

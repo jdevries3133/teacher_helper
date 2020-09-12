@@ -8,11 +8,15 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
+from selenium.common.exceptions import (
+    StaleElementReferenceException,
+    TimeoutException
+)
 
 from .exceptions import (
     InvalidViewError,
-    CAException
+    CAException,
+    AssignmentNamingConflict
 )
 
 
@@ -39,7 +43,7 @@ class ClassroomAutomator:
         password_elem.send_keys(Keys.RETURN)
         try:
             WebDriverWait(self.driver, 20).until(
-                lambda driver: 'https://classroom.google.com' in driver.current_url
+                lambda dr: 'https://classroom.google.com' in dr.current_url
             )
         except TimeoutException:
             input(
@@ -48,13 +52,23 @@ class ClassroomAutomator:
             )
         self.current_view = 'home'
         self.classrooms = {}
-        # identify and assign as attribute the classrooms that are on the home page
-        els = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div/div[2]/div/ol/li/div[1]/div[3]/h2/a[1]')))
-        els = self.driver.find_elements(By.XPATH, '/html/body/div[2]/div/div[2]/div/ol/li/div[1]/div[3]/h2/a[1]')
+        # identify and assign as attribute the classrooms that are on the
+        # home page
+        homepage_anchor_tags_for_each_classroom = (
+            '/html/body/div[2]/div/div[2]/div/ol/li/div[1]/div[3]/h2/a[1]'
+        )
+        els = WebDriverWait(
+            self.driver, 10
+        ).until(EC.presence_of_element_located(
+                (By.XPATH, homepage_anchor_tags_for_each_classroom)
+            ))
+        els = self.driver.find_elements(
+            By.XPATH, homepage_anchor_tags_for_each_classroom
+        )
         for el in els:
             self.classrooms.setdefault(el.text, el.get_attribute('href'))
 
-    def navigate_to(self, view, *args, **kwargs):
+    def navigate_to(self, view: str, *args, **kwargs):
         """
         Navigate to a particular classroom view.
         """
@@ -63,28 +77,73 @@ class ClassroomAutomator:
         if view == 'home':
             self.driver.get('https://classroom.google.com/')
             self.current_view = 'home'
-        if view == 'classroom':
+        elif view == 'classroom':
             self.driver.get(self.classrooms[kwargs['classroom_name']])
             self.current_view = 'classroom'
-        if view == 'classwork':
+        elif view == 'classwork':
             if self.current_view != 'classroom':
-                self.navigate_to('classroom', classroom_name=kwargs['classroom_name'])
+                self.navigate_to(
+                    'classroom', 
+                    classroom_name=kwargs['classroom_name']
+                )
                 self._open_classwork_tab()
                 self.current_view = 'classwork'
+        elif view == 'assignment':
+            url = self._get_assignment_url(kwargs['assignment_name'])
+            self.driver.get(url)
+        elif view == 'assignment_feedback':
+            url = self._get_assignment_url(kwargs['assignment_name'])
+            parts = url.split('/')
+            sep = parts.index('c')
+            base = '/'.join(parts[:sep]) + '/'
+            av_url = base + f'g/tg/{parts[sep+1]}/{parts[sep+3]}'
+            self.driver.get(av_url)
 
     def _get_assignment_url(self, assignment_name):
         """
-        Must be called when the current view is classwork or classroom.
+        Must be called when the current view is classwork or classroom. Can be
+        accessed through self.navigate_to('assignment' assignment_name=name)
         """
         if self.current_view != 'classwork':
             self.navigate_to('classwork')
-        breakpoint()
+        spans_with_assignment_names = WebDriverWait(
+            self.driver, 20
+        ).until(
+            EC.presence_of_all_elements_located(
+                (
+                    By.XPATH,
+                    '/html/body/div[2]/div/main/div/div/div[4]/ol/li/div/div/'
+                    'div/div/ol/li/div/div/div/div/div/span'
+                )
+            )
+        )
+        el = [
+            e for e in spans_with_assignment_names if e.text == assignment_name
+        ]
+        if len(el) > 1:
+            raise AssignmentNamingConflict(
+                'Two assignments in this classroom have the same name.'
+                'ClassroomAutomator cannot know which one should be selected.'
+                f'The duplicated name is {assignment_name}'
+            )
+        span_with_assignment_name = el[0]
+        span_with_assignment_name.click()
+        # might need try/catch if it happens too fast; need to see what error is
+        # first.
+        link_anchor = span_with_assignment_name.find_element_by_xpath(
+            './../../../../../div[2]/div[2]/div/a'
+        )
+        link = link_anchor.get_attribute('href')
+        return link
 
     def _validate_view(self, view, *args, **kwargs):
         """
         Argument validation for self.navigate_to() method.
         """
+        # LIST OF AVAILABLE VIEWS
         if view not in [
+            'assignment',
+            'assignment_feedback',
             'home',
             'classroom',
             'classwork'
@@ -92,15 +151,36 @@ class ClassroomAutomator:
             raise InvalidViewError(
                 f'{view} is not a valid view.'
             )
-        if view == 'classroom' or self.current_view != 'classroom' and view == 'classwork':
-            print('cond')
-            try:
-                name = kwargs['classroom_name']
-            except KeyError:
+        # CLASSROOM AND CLASSWORK (same validation logic)
+        elif view == 'classroom' or view == 'classwork':
+            if 'classroom_name' not in kwargs:
                 raise InvalidViewError(
-                    'To navigate to a classroom view, classroom_name must be'
-                    'passed as a keyword argument'
+                    'To navigate to a classroom or classowork view, '
+                    'classroom_name must be passed as a keyword argument'
                 )
+        # ASSIGNMENT VIEW
+        elif view == 'assignment' or view == 'assignment_feedback':
+            if self.current_view not in [
+                'classwork',
+                'classroom',
+            ]:
+                raise InvalidViewError(
+                    'Must navigate to classroom or classwork before navigating '
+                    'to an assignment'
+                )
+            if 'assignment_name' not in kwargs:
+                raise InvalidViewError(
+                    'assignment_name must be provided as a keyword argument to '
+                    'navigate_to() in order to navigate to a specific '
+                    'assignment.'
+                )
+            if self.current_view == 'classroom':
+                self.navigate_to('classwork')
+        else:
+            raise CAException(
+                'Error in _validate_view(), validation not performed on view:\n'
+                    + view
+            )
 
     def _open_classwork_tab(self):
         if self.current_view != 'classroom':

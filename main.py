@@ -3,14 +3,11 @@ from pathlib import Path
 from helper import Helper
 from helper.ClassroomAutomator import FeedbackAutomator
 
+class MyAutomator(FeedbackAutomator):
+    def assess(self):
+        pass
 
 if __name__ == '__main__':
-    helper = Helper.read_cache()
-
-    class MyAutomator(FeedbackAutomator):
-        def assess(self):
-            pass
-
     atm = MyAutomator(
         os.getenv('GMAIL_USERNAME'),
         os.getenv('GMAIL_PASSWORD_RAW'),

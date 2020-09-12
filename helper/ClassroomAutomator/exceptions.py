@@ -19,3 +19,8 @@ class ClassroomNameException(CAException):
     passed in does not match, it will raise this exception.
     """
     pass
+
+class AssignmentNamingConflict(Exception):
+    """
+    If two assignments in the same classroom have the same name.
+    """
