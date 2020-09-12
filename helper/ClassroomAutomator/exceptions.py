@@ -11,3 +11,11 @@ class InvalidViewError(CAException):
     view or *args or **kwargs are passed into it.
     """
     pass
+
+
+class ClassroomNameException(CAException):
+    """
+    Clasroom names passed in must match names in google classrooms. If a name
+    passed in does not match, it will raise this exception.
+    """
+    pass

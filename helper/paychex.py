@@ -42,17 +42,15 @@ class Paychex:
         self.clock_state_file = CLOCK_STATE_FILE
         self.clock_state = self.get_clock_state()
 
-    def __enter__(self):
+    def __enter__(self, *args, **kwargs):
         chrome_options = Options()
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--window-size=1440x789')
         self.driver = webdriver.Chrome(options=chrome_options)
+        return self
 
-    def __exit__(self):
+    def __exit__(self, type, value, traceback):
         self.driver.quit()
-
-    def __del__(self):
-        self.driver.close()
 
     def clock(self):
         """

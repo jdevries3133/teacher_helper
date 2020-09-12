@@ -10,6 +10,7 @@ from selenium.common.exceptions import StaleElementReferenceException, TimeoutEx
 import pyautogui as pg
 
 from .automator import ClassroomAutomator
+from .exceptions import ClassroomNameException
 
 
 class FeedbackAutomator(ClassroomAutomator, ABC):
@@ -17,10 +18,17 @@ class FeedbackAutomator(ClassroomAutomator, ABC):
         super().__init__(username, password)
         self.assignment_name = assignment_name
         self.classroom_names = classroom_names
+        # validate classroom names with names found from the DOM
+        for name in classroom_names:
+            if name not in self.classrooms:
+                raise ClassroomNameException(
+                    f'{name} does not match one of the following classroom '
+                    f'names read from the DOM:\n\n{self.classrooms.keys()}'
+                )
 
     def loop(self):
-        for classroom in classroom_names:
-            self.navigate_to('classroom', classroom_name=classroom)
+        for classroom in self.classroom_names:
+            self.navigate_to('classwork', classroom_name=classroom)
             breakpoint()
 
     @abstractmethod

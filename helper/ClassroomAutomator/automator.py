@@ -1,4 +1,5 @@
 import os
+import re
 from time import sleep
 import sys
 
@@ -8,10 +9,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
-import pyautogui as pg
 
 from .exceptions import (
     InvalidViewError,
+    CAException
 )
 
 
@@ -45,23 +46,13 @@ class ClassroomAutomator:
                 'Complete two factor auth challenge, then press enter to '
                 'continue.'
             )
-            WebDriverWait(self.driver, 20).until(
-                lambda driver: 'https://classroom.google.com' in driver.current_url
-            )
         self.current_view = 'home'
-
-    def enforce_view(func):
-        """
-        Requires the driver to be in a particular view before the function is
-        called. If the driver is not in the passed in view, it will navigate
-        to it with the self.navigate_to(view) function.
-        """
-        def wrapper(*args):
-            breakpoint()
-            if args[0].current_view != args[1]:
-                args[0].navigate_to(args[1])
-            func(args)
-        return wrapper
+        self.classrooms = {}
+        # identify and assign as attribute the classrooms that are on the home page
+        els = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div/div[2]/div/ol/li/div[1]/div[3]/h2/a[1]')))
+        els = self.driver.find_elements(By.XPATH, '/html/body/div[2]/div/div[2]/div/ol/li/div[1]/div[3]/h2/a[1]')
+        for el in els:
+            self.classrooms.setdefault(el.text, el.get_attribute('href'))
 
     def navigate_to(self, view, *args, **kwargs):
         """
@@ -71,24 +62,38 @@ class ClassroomAutomator:
         self._validate_view(view, *args, **kwargs)
         if view == 'home':
             self.driver.get('https://classroom.google.com/')
+            self.current_view = 'home'
         if view == 'classroom':
-            if self.current_view != 'home':
-                self.navigate_to('home')
-            class_name = kwargs['classroom_name']
-            breakpoint()
+            self.driver.get(self.classrooms[kwargs['classroom_name']])
+            self.current_view = 'classroom'
+        if view == 'classwork':
+            if self.current_view != 'classroom':
+                self.navigate_to('classroom', classroom_name=kwargs['classroom_name'])
+                self._open_classwork_tab()
+                self.current_view = 'classwork'
+
+    def _get_assignment_url(self, assignment_name):
+        """
+        Must be called when the current view is classwork or classroom.
+        """
+        if self.current_view != 'classwork':
+            self.navigate_to('classwork')
+        breakpoint()
 
     def _validate_view(self, view, *args, **kwargs):
         """
-        Argument validation logic for self.navigate_to() method.
+        Argument validation for self.navigate_to() method.
         """
         if view not in [
             'home',
             'classroom',
+            'classwork'
         ]:
             raise InvalidViewError(
                 f'{view} is not a valid view.'
             )
-        if view == 'classroom':
+        if view == 'classroom' or self.current_view != 'classroom' and view == 'classwork':
+            print('cond')
             try:
                 name = kwargs['classroom_name']
             except KeyError:
@@ -97,27 +102,19 @@ class ClassroomAutomator:
                     'passed as a keyword argument'
                 )
 
-    # @enforce_view('classroom')
-    def _open_materials_tab(self):
-
+    def _open_classwork_tab(self):
+        if self.current_view != 'classroom':
+            raise InvalidViewError(
+                'Cannot open classwork tab from view other than classroom '
+                'view.'
+            )
         url_validation_regex = (
             re.compile(r'https://classroom.google.com/u/(\d)/(c|w|r)/(\w{16})')
         )
         mo = re.search(
             url_validation_regex,
-            driver.current_url
+            self.driver.current_url
         )
-        self.user_url_pararm = mo[1]
-        self.class_id = mo[3]
         self.driver.get(
-            f'https://classroom.google.com/u/{self.user_url_param}/w/{self.class_id}'
+            f'https://classroom.google.com/u/{mo[1]}/w/{mo[3]}'
         )
-
-
-    @classmethod
-    def map_class_id_to_class_name(cls, username, password):
-        """
-        For methods that access class ids, this instantiates the object with
-        class ids mapped to the class's names.
-        """
-        pass
