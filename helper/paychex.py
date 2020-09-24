@@ -8,7 +8,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
-from .imap import Imap
+from .imap import Imap, PaychexOTPNotFound
 
 
 CLOCK_STATE_FILE = os.path.join(os.path.dirname(__file__), 'paychex_clock_state.txt')
@@ -70,7 +70,9 @@ class Paychex:
         else:
             choice = None
             while not choice == 'in' or not choice == 'out':
-                choice = input('Would you like to clock in or out?\n')
+                choice = input(
+                    'Would you like to clock in or out? (enter "in" or "out")\n'
+                )
                 if choice == 'in':
                     self.clock_in()
                     break
@@ -94,13 +96,13 @@ class Paychex:
         # 2-Factor Auth (may not be necessary)
         try:
             two_factor_auth_input = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="otpCode"]')))
-            sleep(10)
+            sleep(10) # wait for email to be sent before trying to fetch.
             try:
                 otp = Imap(
                     os.getenv('GMAIL_USERNAME'),
                     os.getenv('GMAIL_PASSWORD'),
                 ).get_paychex_otp()
-            except:
+            except PaychexOTPNotFound:
                 otp = input('Enter text verification code.\n')
             two_factor_auth_input.send_keys(otp)
             self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div/div/form/div[2]/div/div/button[2]').click()
