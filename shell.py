@@ -74,7 +74,12 @@ try:
         u = os.getenv('PAYCHEX_USR'),  # username
         p = os.getenv('PAYCHEX_PASS')  # password
         with Paychex(u, p) as pcx:
-            pcx.clock()
+            if 'in' in sys.argv:
+                pcx.clock_in()
+            elif 'out' in sys.argv:
+                pcx.clock_out()
+            else:
+                pcx.clock()
         sys.exit()
 
     # silly timer

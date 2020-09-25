@@ -7,6 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import TimeoutException
 
 from .imap import Imap, PaychexOTPNotFound
 
@@ -93,20 +94,16 @@ class Paychex:
         username_input = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.ID, "USER")))
         username_input.send_keys(self.username)
         self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[2]/div[2]/div[1]/div/form/div/div[2]/div[2]/button').click()
-        # 2-Factor Auth (may not be necessary)
+        # 2-Factor Auth
         try:
             two_factor_auth_input = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="otpCode"]')))
             sleep(10) # wait for email to be sent before trying to fetch.
-            try:
-                otp = Imap(
-                    os.getenv('GMAIL_USERNAME'),
-                    os.getenv('GMAIL_PASSWORD'),
-                ).get_paychex_otp()
-            except PaychexOTPNotFound:
-                otp = input('Enter text verification code.\n')
+            otp = self.get_otp()
+            print(otp)
             two_factor_auth_input.send_keys(otp)
             self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div/div/form/div[2]/div/div/button[2]').click()
-        except:
+        except TimeoutException:
+            print('Two factor auth not required')
             pass
         # password
         WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.NAME, "PASSWORD"))).send_keys(self.password)
@@ -115,7 +112,46 @@ class Paychex:
         self.driver.switch_to.default_content()
         self.is_logged_in = True
         self.set_clock_state(self._read_site_state())
-        return 0
+
+    def get_otp(self):
+        try:
+            username = os.getenv('EMAIL_USERNAME')
+            password = os.getenv('EMAIL_PASSWORD')
+            if username and password:
+                otp = Imap(
+                    username,
+                    password
+                ).get_paychex_otp()
+            else:
+                print(
+                    'WARNING: Automatic one-time-password-fetch from email is not '
+                    'properly configured. If you follow these steps, this '
+                    'module can\nautomatically fetch the paychex one-time-'
+                    'passcode from your email and log you in:\n'
+                    '\t*  Get an app on your phone to automatically forward '
+                        'emails from paychex\n\tto your email. I use LarenSMS for Android\n'
+                    '\t* Set an email filter to put those emails into an inbox '
+                        'called "Paychex".\n\tIt\'s also a good idea to '
+                        'Set that filter to make the emails skip your inbox '
+                        'So that you don\'t get spammed.\n'
+                    '\t* Set your email username and password as environment '
+                        'variables on your system.\n\tThe variable names '
+                        'should be "EMAIL_USERNAME", and "EMAIL_PASSWORD".\n\t'
+                        'for gmail, set up 2FA and create an app password:\n\t'
+                        'https://support.google.com/accounts/answer/185833?hl=en\n'
+
+                    '\t* After that, it should just work.\n\n'
+
+                    'Alternatively, subclass Paychex and rewrite the '
+                    'get_otp method. It takes no arguments, and returns the '
+                    'otp as a string.\nBy default, it tries to find your '
+                    'email username and password and to auto-fetch the '
+                    'passcode, and falls back on input().'
+                )
+                return input('\n\n\nSince automatic otp fetching is not setup, enter the otp sent to your phone now:\n')
+        except PaychexOTPNotFound:
+            otp = input('Enter text verification code.\n')
+        return otp
 
     @login_first
     def clock_in(self):
@@ -212,7 +248,7 @@ class Paychex:
             raise Exception(
                 'Cannot read site before login'
             )
-        status = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="employeeStatus"]'))).text
+        status = WebDriverWait(self.driver, 35).until(EC.presence_of_element_located((By.XPATH, '//*[@id="employeeStatus"]'))).text
         if status == 'Clocked Out':
             return 'out'
         elif 'Working since' in status:
