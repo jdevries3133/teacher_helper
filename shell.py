@@ -8,8 +8,9 @@ from helper import Helper
 
 class ShellUtils:
 
-    def improper_usage(self):
-        self.print_help()
+    @ staticmethod
+    def improper_usage():
+        ShellUtils.print_help()
         print('IMPROPER USAGE, SEE HELP ABOVE')
         sys.exit()
 
@@ -25,13 +26,13 @@ class ShellUtils:
             sys.exit()
 
     @staticmethod
-    def print_help(self):
+    def print_help():
         print("""
         Supported commands:
 
         student [name] (-v)
-            Pretty prints the dictionary of the matching student. If verbose, also
-            print the dict of the students' guardians.
+            Pretty prints the dictionary of the matching student. If verbose,
+            also print the dict of the students' guardians.
 
         clock
             Automatically clocks in or out of Paychex, depending on time of day
@@ -43,15 +44,21 @@ class ShellUtils:
             the variable name "helper". All attributes and methods are accessible.
         """)
 
-if '-h' in sys.argv or 'help' in sys.argv:
-    ShellUtils.print_help()
 
-if '-v' in sys.argv:
-    verbose = True
-else:
-    verbose = False
+def main():
+    if '-h' in sys.argv or 'help' in sys.argv:
+        ShellUtils.print_help()
+        sys.exit()
 
-try:
+    if '-v' in sys.argv:
+        verbose = True
+    else:
+        verbose = False
+
+    if len(sys.argv) < 1:
+        helper = ShellUtils.check_cache()
+        code.interact(local=locals())
+
     # student search
     if sys.argv[1] == 'student':
         helper = ShellUtils.check_cache()
@@ -95,9 +102,23 @@ try:
         except IndexError:
             ShellUtils.improper_usage()
 
-except IndexError:
-    pass
+    # quick open google classrooms by tag name
+    if sys.argv[1] == 'gc':
+        import webbrowser
+        valid_tags = {
+            '6': 'https://classroom.google.com/u/0/c/MTU4NTE3OTg5MDc0',
+            '5': 'https://classroom.google.com/u/0/c/MTU4NTE3OTg5MDMz',
+            '4': 'https://classroom.google.com/u/0/c/MTU4NDc3MDE2ODA0',
+            'g': 'https://classroom.google.com/u/0/c/MTUyNDYzMzI3MjQx',
+        }
+        try:
+            webbrowser.open(valid_tags[sys.argv[2]])
+        except KeyError:
+            print(
+                'Invalid google classroom tag name. Acceptable tags are:\n'
+                + '\t'.join(valid_tags.keys())
+            )
 
 
-helper = ShellUtils.check_cache()
-code.interact(local=locals())
+if __name__ == '__main__':
+    main()
