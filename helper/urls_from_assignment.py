@@ -1,18 +1,14 @@
 import csv
-import json
-from sparta_helper import Helper
-import docx
-from docx.opc.constants import RELATIONSHIP_TYPE as RT
 from pathlib import Path
 import re
+import json
+from .helper import Helper
 
-
-good_regex = re.compile(r'http(s)*://musiclab\.chromeexperiments\.com/[s|S]ong-[m|M]aker/song/(\d){16}')
-near_match_regex = re.compile(r'musiclab\.chromeexperiments')
 
 def regex_search_docx_path(good_regex, near_match_regex, directory):
     helper = Helper.read_cache()
-    matches, misses = helper.get_regex_classroom_doc(Path.resolve(Path('docs')), good_regex, yes=True, bad_link_regex=near_match_regex)
+    matches, misses = helper.get_regex_classroom_doc(Path.resolve(
+        Path('docs')), good_regex, yes=True, bad_link_regex=near_match_regex)
     with open('out.csv', 'w') as csvfile:
         wr = csv.writer(csvfile)
         wr.writerow(['Name', 'Link', 'Homeroom'])
@@ -24,21 +20,14 @@ def regex_search_docx_path(good_regex, near_match_regex, directory):
         for _ in misses:
             wr.writerow(_)
 
-def get_url_from_classroom_json(helper):
+
+def get_url_from_classroom_json(helper, good_regex, miss_regex):
     """
     If you want to use this again, refactor the code to take arguments. This is
     currently only written as a script.
     """
     outlinks = []
     near_match = []
-    no_media = helper.find_nearest_match([
-        'List students without media disclosures here.'
-    ])
-    for st in helper.students:
-        if st in no_media:
-            st.media = False
-        else:
-            st.media = True
     for classroom in Path('google_classrooms').iterdir():
         if 'mohawk' in classroom.name.lower():
             continue
@@ -60,22 +49,27 @@ def get_url_from_classroom_json(helper):
                     for submission in post['courseWork']['submissions']:
                         try:
                             student_name = submission['student']['profile']['name']['fullName']
-                            st = helper.find_nearest_match([student_name], debug=True)[0]
+                            st = helper.find_nearest_match(
+                                [student_name], debug=True)[0]
                             attachments = submission['assignmentSubmission']['attachments']
-                            urls  = [a['link']['url'] for a in attachments]
+                            urls = [a['link']['url'] for a in attachments]
                         except KeyError:
                             continue
                         for url in urls:
-                            mo = re.fullmatch(smg_regex, url)
+                            mo = re.fullmatch(good_regex, url)
                             if mo:
                                 if st.media:
-                                    outlinks.append([student_name, mo.string, st.homeroom, hr])
+                                    outlinks.append(
+                                        [student_name, mo.string, st.homeroom, hr])
                                 else:
-                                    initials = st.first_name[0] + '. ' + st.last_name[0]
-                                    outlinks.append([initials, mo.string, st.homeroom, hr])
-                                mo = re.search(fuckup_regex, url)
+                                    initials = st.first_name[0] + \
+                                        '. ' + st.last_name[0]
+                                    outlinks.append(
+                                        [initials, mo.string, st.homeroom, hr])
+                                mo = re.search(miss_regex, url)
                                 if mo:
-                                    near_match.append([student_name, mo.string, st.homeroom])
+                                    near_match.append(
+                                        [student_name, mo.string, st.homeroom])
             if not 'comments' in post:
                 continue
             for comment in post['comments']:
@@ -83,17 +77,20 @@ def get_url_from_classroom_json(helper):
                 if student_name == "John Devries":
                     continue
                 try:
-                    mo = re.fullmatch(smg_regex, comment['comment'])
+                    mo = re.fullmatch(good_regex, comment['comment'])
                     if mo:
                         if st.media:
-                            outlinks.append([student_name, mo.string, st.homeroom])
+                            outlinks.append(
+                                [student_name, mo.string, st.homeroom])
                         else:
-                            initials = st.first_name[0] + '. ' + st.last_name[0]
+                            initials = st.first_name[0] + \
+                                '. ' + st.last_name[0]
                             outlinks.append([initials, mo.string, st.homeroom])
                     else:
-                        mo = re.search(fuckup_regex, comment['comment'])
+                        mo = re.search(miss_regex, comment['comment'])
                         if mo:
-                            near_match.append([student_name, mo.string, st.homeroom])
+                            near_match.append(
+                                [student_name, mo.string, st.homeroom])
                             print('\n\nFuckup')
                             print([student_name, mo.string, st.homeroom])
                 except Exception as e:
@@ -118,7 +115,3 @@ def get_url_from_classroom_json(helper):
     with open(Path('near_match.csv'), 'w') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows(near_match)
-
-if __name__ == '__main__':
-    for i in Path('docs').iterdir():
-        regex_search_docx_path(good_regex, near_match_regex, Path('docs'))

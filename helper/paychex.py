@@ -12,7 +12,8 @@ from selenium.common.exceptions import TimeoutException
 from .imap import Imap, PaychexOTPNotFound
 
 
-CLOCK_STATE_FILE = os.path.join(os.path.dirname(__file__), 'paychex_clock_state.txt')
+CLOCK_STATE_FILE = os.path.join(
+    os.path.dirname(__file__), 'paychex_clock_state.txt')
 CHROME_DRIVER_PATH = os.path.join(os.path.dirname(__file__), 'chromedriver')
 
 
@@ -22,6 +23,7 @@ def login_first(func):
             args[0].login()
         func(args[0])
     return wrapper
+
 
 class Paychex:
     """
@@ -36,12 +38,14 @@ class Paychex:
     Note: After login, the web driver is left with the inner html document
     selected.
     """
+
     def __init__(self, username, password):
         self.username = username
         self.password = password
         self.is_logged_in = False
         self.clock_state_file = CLOCK_STATE_FILE
         self.clock_state = self.get_clock_state()
+        self.driver = None  # launched in __enter__
 
     def __enter__(self, *args, **kwargs):
         chrome_options = Options()
@@ -50,7 +54,7 @@ class Paychex:
         self.driver = webdriver.Chrome(options=chrome_options)
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, traceback):
         self.driver.quit()
 
     def clock(self):
@@ -91,27 +95,32 @@ class Paychex:
             self.driver.find_element_by_name('login')
         ))
         # username
-        username_input = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.ID, "USER")))
+        username_input = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located((By.ID, "USER")))
         username_input.send_keys(self.username)
-        self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div[2]/div[2]/div[1]/div/form/div/div[2]/div[2]/button').click()
+        self.driver.find_element_by_xpath(
+            '/html/body/div[1]/div[2]/div[2]/div[2]/div[1]/div/form/div/div[2]/div[2]/button').click()
         # 2-Factor Auth
         try:
-            two_factor_auth_input = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="otpCode"]')))
-            sleep(10) # wait for email to be sent before trying to fetch.
+            two_factor_auth_input = WebDriverWait(self.driver, 20).until(
+                EC.presence_of_element_located((By.XPATH, '//*[@id="otpCode"]')))
+            sleep(10)  # wait for email to be sent before trying to fetch.
             otp = self.get_otp()
             print(otp)
             two_factor_auth_input.send_keys(otp)
-            self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div/div/form/div[2]/div/div/button[2]').click()
+            self.driver.find_element_by_xpath(
+                '/html/body/div[1]/div[2]/div/div/form/div[2]/div/div/button[2]').click()
         except TimeoutException:
             print('Two factor auth not required')
-            pass
         # password
-        WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.NAME, "PASSWORD"))).send_keys(self.password)
-        self.driver.find_element_by_xpath('/html/body/div[1]/div[2]/div/div/div/div/form/div[1]/div[2]/div[2]/button[2]').click()
+        WebDriverWait(self.driver, 20).until(EC.presence_of_element_located(
+            (By.NAME, "PASSWORD"))).send_keys(self.password)
+        self.driver.find_element_by_xpath(
+            '/html/body/div[1]/div[2]/div/div/div/div/form/div[1]/div[2]/div[2]/button[2]').click()
         # reset frame
         self.driver.switch_to.default_content()
         self.is_logged_in = True
-        self.set_clock_state(self._read_site_state())
+        self.set_clock_state()
 
     def get_otp(self):
         try:
@@ -129,16 +138,16 @@ class Paychex:
                     'module can\nautomatically fetch the paychex one-time-'
                     'passcode from your email and log you in:\n'
                     '\t*  Get an app on your phone to automatically forward '
-                        'emails from paychex\n\tto your email. I use LarenSMS for Android\n'
+                    'emails from paychex\n\tto your email. I use LarenSMS for Android\n'
                     '\t* Set an email filter to put those emails into an inbox '
-                        'called "Paychex".\n\tIt\'s also a good idea to '
-                        'Set that filter to make the emails skip your inbox '
-                        'So that you don\'t get spammed.\n'
+                    'called "Paychex".\n\tIt\'s also a good idea to '
+                    'Set that filter to make the emails skip your inbox '
+                    'So that you don\'t get spammed.\n'
                     '\t* Set your email username and password as environment '
-                        'variables on your system.\n\tThe variable names '
-                        'should be "EMAIL_USERNAME", and "EMAIL_PASSWORD".\n\t'
-                        'for gmail, set up 2FA and create an app password:\n\t'
-                        'https://support.google.com/accounts/answer/185833?hl=en\n'
+                    'variables on your system.\n\tThe variable names '
+                    'should be "EMAIL_USERNAME", and "EMAIL_PASSWORD".\n\t'
+                    'for gmail, set up 2FA and create an app password:\n\t'
+                    'https://support.google.com/accounts/answer/185833?hl=en\n'
 
                     '\t* After that, it should just work.\n\n'
 
@@ -165,8 +174,8 @@ class Paychex:
             )
         site_state = self._read_site_state()
         if site_state == 'out':
-            new_state = self._toggle_clock()
-        self.set_clock_state(new_state)
+            self._toggle_clock()
+        self.set_clock_state()
         print('Clock in successful')
         self.driver.close()
 
@@ -182,11 +191,11 @@ class Paychex:
             )
         site_state = self._read_site_state()
         if site_state == 'in':
-            new_state = self._toggle_clock()
-        self.set_clock_state(new_state)
+            self._toggle_clock()
+        self.set_clock_state()
         print('Clock out successful')
         self.driver.close()
-    
+
     def get_clock_state(self):
         """
         Returns the clock state that is LOCALLY CACHED. This may not be accurate,
@@ -201,7 +210,7 @@ class Paychex:
         Sets local state and self attribute to new state
         """
         state = self._read_site_state()
-        self.new_state = state
+        self.clock_state = state
         self._update_cached_state(state)
         return state
 
@@ -236,7 +245,8 @@ class Paychex:
             raise Exception(
                 'Cannot read site before login'
             )
-        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.XPATH, '//*[@id="stackedinvisibilebutton"]'))).click()
+        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
+            (By.XPATH, '//*[@id="stackedinvisibilebutton"]'))).click()
         return self._read_site_state()
 
     def _read_site_state(self):
@@ -248,13 +258,13 @@ class Paychex:
             raise Exception(
                 'Cannot read site before login'
             )
-        status = WebDriverWait(self.driver, 35).until(EC.presence_of_element_located((By.XPATH, '//*[@id="employeeStatus"]'))).text
+        status = WebDriverWait(self.driver, 35).until(
+            EC.presence_of_element_located((By.XPATH, '//*[@id="employeeStatus"]'))).text
         if status == 'Clocked Out':
             return 'out'
         elif 'Working since' in status:
             return 'in'
         else:
             raise Exception(
-            '_read_site_state met unexpected condition'
+                '_read_site_state met unexpected condition'
             )
-

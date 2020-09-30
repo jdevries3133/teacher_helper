@@ -1,33 +1,27 @@
 import csv
 
 from .student import Student
-from .homeroom import Homeroom
-from .group import Group
+
 
 def parse_homeroom(path):
     """
     Path must be pathlib Path object.
     """
-    csv_filename = path.stem
-    teacher = csv_filename[2:]
-    grade_level = csv_filename[1]
-
-    # student names and ID's in the csv
-    ID_HEADER_STRING = 'ID'
-    NAME_HEADER_STRING = 'Name'
+    teacher = path.stem[2:]
+    grade_level = path.stem[1]
 
     # assign indicies of id and name rows to variables "id_index" and "name
     # index."
     with open(path, 'r') as csv_file:
         reader = csv.reader(csv_file)
-        id_index, name_index, = None, None
-        while not (id_index or name_index):
-            for row in reader:
-                for index, item in enumerate(row):
-                    if item.lower() == 'id':
-                        id_index = index
-                    if item.lower() == 'name':
-                        name_index = index
+        for row in reader:
+            for index, item in enumerate(row):
+                if item.lower() == 'id':
+                    id_index = index
+                if item.lower() == 'name':
+                    name_index = index
+        if not id_index or not name_index:
+            raise Exception('Appropriate headers not found.')
 
     # instantiate a student for every student in the csv
     students = []
@@ -53,6 +47,7 @@ def parse_homeroom(path):
             students.append(student)
 
     return teacher, grade_level, students
+
 
 def parse_group(path):
     """

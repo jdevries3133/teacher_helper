@@ -87,11 +87,11 @@ class Helper(
     def find_nearest_match_depr(self, student_names, auto_yes=False, **kwargs):
         """
         Takes a list of student names, and returns a list of student objects
-        from self.students. If there is no exact name match, it will perform a 
+        from self.students. If there is no exact name match, it will perform a
         fuzzy match and ask the user to resolve the ambiguity in the command line.
 
-        If altTab is true, it will assume this is part of a gui script, and 
-        "command-tab" the user in and out of the input 
+        If altTab is true, it will assume this is part of a gui script, and
+        "command-tab" the user in and out of the input
         """
         raise Exception('remove depricated function')
         # deprication compatibility

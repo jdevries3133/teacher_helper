@@ -58,7 +58,7 @@ class OnCourseMixin:
         )
         with open(guardian_data, 'r', encoding='utf8') as csvfile:
             rd = csv.reader(csvfile)
-            next(rd)
+            next(rd)  # skip header
             for row in rd:
                 # create raw context dict of all strings
                 raw_context = {

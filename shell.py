@@ -2,8 +2,9 @@
 import code
 import os
 import sys
-from pprint import pprint
+import webbrowser
 from helper import Helper
+from helper.paychex import Paychex
 
 
 class ShellUtils:
@@ -77,7 +78,6 @@ def main():
 
     # auto clock in / out
     if sys.argv[1] == 'clock':
-        from helper.paychex import Paychex
         u = os.getenv('PAYCHEX_USR'),  # username
         p = os.getenv('PAYCHEX_PASS')  # password
         with Paychex(u, p) as pcx:
@@ -98,13 +98,12 @@ def main():
                 msg = input(
                     'Enter a message to be spoken after the timer is finished\n'
                 )
-            helper = Helper().timer(mins, msg)
+            Helper().timer(mins, msg)
         except IndexError:
             ShellUtils.improper_usage()
 
     # quick open google classrooms by tag name
     if sys.argv[1] == 'gc':
-        import webbrowser
         valid_tags = {
             '6': 'https://classroom.google.com/u/0/c/MTU4NTE3OTg5MDc0',
             '5': 'https://classroom.google.com/u/0/c/MTU4NTE3OTg5MDMz',

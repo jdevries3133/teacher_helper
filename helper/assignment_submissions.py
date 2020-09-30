@@ -1,5 +1,6 @@
 import csv
 
+
 class AssignmentSubmission:
     """
     Submission status codes:
@@ -13,6 +14,7 @@ class AssignmentSubmission:
         4 = Verified completion ("Returned")
 
     """
+
     def __init__(self, title, submission):
         self.title = title
         state = submission['state']
@@ -41,6 +43,7 @@ class FlipgridSubmission(AssignmentSubmission):
     Important: CSVs from flipgrid must be renamed to exactly match the names
     of the corresponding assignments from google classroom.
     """
+
     def __init__(self, title, submission, st, csv_path):
         super().__init__(title, submission)
         with open(csv_path, 'r') as csvfile:
@@ -56,6 +59,7 @@ class EdpuzzleSubmission(AssignmentSubmission):
     Important: CSVs from edpuzzle must be renamed to exactly match the names
     of the corresponding assignments from google classroom.
     """
+
     def __init__(self, title, submission, st, csv_path):
         super().__init__(title, submission)
         with open(csv_path, 'r') as csvfile:

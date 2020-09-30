@@ -1,7 +1,7 @@
-from copy import copy
 from datetime import datetime
 import json
 from uuid import uuid1
+
 
 def assignment_participation_audit(jsn_path, helper):
     """
@@ -78,13 +78,11 @@ def assignment_participation_audit(jsn_path, helper):
                             if st.name == submitter_name:
                                 st.assignments.setdefault(
                                     assgt_key,
-                                    {'assignment_completed': True,}
+                                    {'assignment_completed': True, }
                                 )
                                 searching = False
-                            
+
                             if counter > 700:
                                 return Exception(f'No match found for {st.name}')
 
     return 0
-                
-

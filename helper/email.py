@@ -1,5 +1,8 @@
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+import smtplib
+import ssl
+import os
 
 
 class Email:
@@ -11,7 +14,8 @@ class Email:
 
     def email(self, students, template_flag):
         if template_flag == 'soundtrap':
-            no_pass = [s for s in students if not hasattr(s, 'soundtrap_password')]
+            no_pass = [s for s in students if not hasattr(
+                s, 'soundtrap_password')]
             if no_pass:
                 nl = '\n'
                 raise Exception(
@@ -26,13 +30,14 @@ class Email:
                     os.getenv('GMAIL_PASSWORD'),
                 )
                 for st in students:
-                    me = 'john.devries@sparta.org'
+                    me = 'jdevries@empacad.org'
                     you = st.email
                     msg = MIMEMultipart('alternative')
                     msg['Subject'] = 'Your Soundtrap Account is Ready!'
                     msg['From'] = me
                     msg['To'] = you
-                    text, html = Email.soundtrap_template(st.first_name, st.email, st.soundtrap_password)
+                    text, html = Email.soundtrap_template(
+                        st.first_name, st.email, st.soundtrap_password)
                     part1 = MIMEText(text, 'plain')
                     part2 = MIMEText(html, 'html')
                     msg.attach(part1)

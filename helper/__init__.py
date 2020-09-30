@@ -1,13 +1,14 @@
-from .helper import Helper
-from .student import Student
-
 import os
 from pathlib import Path
 
+from .helper import Helper
+from .student import Student
+
+
 REQUIRED_VARS = [
     'EMAIL_USERNAME',
-    'EMAIL_PASSWORD', 
- ]
+    'EMAIL_PASSWORD',
+]
 
 for var in REQUIRED_VARS:
     if not os.getenv(var):

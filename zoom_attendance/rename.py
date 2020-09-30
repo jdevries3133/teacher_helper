@@ -1,6 +1,5 @@
 import csv
 import os
-from time import sleep
 
 
 for i in os.listdir('.'):
@@ -25,4 +24,3 @@ for i in os.listdir('.'):
         breakpoint()
     new_name = topic + ' ' + date + '.csv'
     os.rename(i, new_name)
-    renamed.append(new_name)

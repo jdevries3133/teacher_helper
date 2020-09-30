@@ -1,7 +1,3 @@
-import csv
-import os
-
-
 class Student:
     def __init__(self, context):
         """
@@ -51,7 +47,7 @@ class Student:
                 gu.relationship_to_student,
                 gu.name,
                 f'Contact allowed: {gu.allow_contact}',
-                f'Is primary contact: NEED TO IMPORT',
+                'Is primary contact: NEED TO IMPORT',
                 gu.mobile_phone,
                 gu.email,
                 '\n',

@@ -1,5 +1,5 @@
 from time import sleep
-from subprocess import call
+import subprocess
 import sys
 
 
@@ -7,7 +7,8 @@ class SillyMixin:
     def __init__(self, *args, **kwargs):
         pass
 
-    def timer(self, time_mins: int, alarm_message: str):
+    @ staticmethod
+    def timer(time_mins: int, alarm_message: str):
         if sys.platform != "darwin":
             raise Exception(
                 "This function only works on Darwin platforms (OS X)")
