@@ -1,13 +1,11 @@
 import dbm
 import os
 import shelve
-from copy import copy
 from datetime import datetime
 
 from fuzzywuzzy import process
 
 from .HelperMixins import EndOfSchoolYearMixin, OnCourseMixin, SillyMixin
-from .student import Student
 
 MODULE_DIR = os.path.dirname(__file__)
 
@@ -35,23 +33,23 @@ class Helper(
             db['data'] = self
             db['date'] = datetime.now()
 
-    def find_nearest_match(self, student_name, auto_yes=False, threshold=90, **kwargs):
+    def find_nearest_match(self, student_name: str, auto_yes=False, threshold=90, **kwargs):
         """
         Returns a student object. If auto_yes=True, it will presume that the
         best matching student is correct. Optionally, set a levenshtien distance
         threshold below which students will not be included.
         """
-        if isinstance(student_name, list):
-            return self.find_nearest_match_depr(student_name, auto_yes, **kwargs)
-        if not isinstance(student_name, str):
-            raise TypeError("Student name must be passed as a string")
-        if not len(student_name.split(' ')) > 1:
-            raise Warning(
-                'find_nearest_match will typically return an incorrect result '
-                'if student\'s full name is not provided.'
+        if not len(student_name.split(' ')) > 1 and auto_yes:
+            raise Exception(
+                'If a student\'s full name is not provided, the query result '
+                'will likely have a low confidence and not pass the default '
+                'threshold value of 90. Lowering the threshold value will '
+                'greately increase the liklehood of incorrect matches.\n'
+                'Hence, it is best to provide the student\'s full name to this '
+                'function if auto_yes is set to true.\n\tThe name provded was:\t'
+                + student_name
             )
         try:
-            # exact match
             return self.students[student_name]
         except KeyError:
             pass
@@ -62,17 +60,7 @@ class Helper(
         if auto_yes:
             res = True
         else:
-            print('Do these names match? (y/n)')
-            print('-' * 80)
-            print(student_name, closest_name, sep='\t', end="\n\n")
-            res = input()
-            if res.lower() in ['y', 'yes']:
-                res = True
-            elif res.lower() in ['n', 'no']:
-                res = False
-            else:
-                print('Please enter "y" or "n".')
-                self.find_nearest_match(student_name)
+            res = self.match_in_terminal(student_name, closest_name)
         if res and not auto_yes:
             # allow match to pass regardless of threshold if match was provided
             # by user input
@@ -84,81 +72,18 @@ class Helper(
             print('Student object not found. find_nearest_match will return None')
         # None will be returned if no return conditions are met
 
-    def find_nearest_match_depr(self, student_names, auto_yes=False, **kwargs):
-        """
-        Takes a list of student names, and returns a list of student objects
-        from self.students. If there is no exact name match, it will perform a
-        fuzzy match and ask the user to resolve the ambiguity in the command line.
-
-        If altTab is true, it will assume this is part of a gui script, and
-        "command-tab" the user in and out of the input
-        """
-        raise Exception('remove depricated function')
-        # deprication compatibility
-        if kwargs.get('debug'):
-            auto_yes = kwargs['debug']
-        for index, name in enumerate(copy(student_names)):
-            # direct match(es)
-            matches = [(s.name, s) for s in self.students if s.name == name]
-            if matches:
-                # single direct match
-                if len(matches) == 1:
-                    student_names[index] = matches[0][1]
-                # multiple matches
-                else:
-                    for match in matches:
-                        done = False
-                        if not auto_yes:
-                            print('-' * 80)
-                            print(
-                                '\nDo these names match? (y/n/p) (yes, no, pass)\n')
-                            print(name + '\t' + match[0] + '\n')
-                        while True:
-                            if auto_yes:
-                                yn = 'y'
-                            else:
-                                yn = input().lower()
-                            if yn == 'y':
-                                student_names[index] = match[1]
-                                break
-                            elif yn == 'n':
-                                break
-                            elif yn == 'p':
-                                pass
-                            else:
-                                print('Please enter y, n, or p')
-                        if done:
-                            break
-            # no match
-            else:
-                qset = process.extractOne(
-                    name,
-                    [s.name for s in self.students]
-                )
-                if not auto_yes:
-                    print('-' * 80)
-                    print('\nDo these names match? (y/n/p) (yes, no, pass)\n')
-                while True:
-                    if auto_yes:
-                        u_in = 'y'
-                    else:
-                        u_in = input(name + '\t' + qset[0] + '\n').lower()
-                    if u_in == 'y':
-                        student_names[index] = (
-                            [s for s in self.students if s.name == qset[0]][0]
-                        )
-                        break
-                    elif u_in == 'n':
-                        break
-                    elif u_in == 'p':
-                        break
-                    else:
-                        print('Please enter "y" or "n."')
-        for name in copy(student_names):
-            if not isinstance(name, Student):
-                print(f'{name} was deleted because they had no match.')
-                student_names.remove(name)
-        return student_names  # now converted to Student class instances
+    def match_in_terminal(self, a, b):
+        print('Do these names match? (y/n)')
+        print('-' * 80)
+        print(a, b, sep='\t', end="\n\n")
+        res = input()
+        if res.lower() in ['y', 'yes']:
+            return True
+        elif res.lower() in ['n', 'no']:
+            return False
+        else:
+            print('Please enter "y" or "n".')
+            return self.match_in_terminal(a, b)
 
     @ staticmethod
     def read_cache(check_date=True):
