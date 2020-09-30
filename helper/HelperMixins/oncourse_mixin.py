@@ -3,8 +3,10 @@ from ..student import Student
 from ..homeroom import Homeroom
 from ..parent_guardian import ParentGuardian
 
+
 class OnCourseBooleanConversionError(Exception):
     pass
+
 
 class OnCourseMixin:
     def __init__(self, homerooms=None, students=None, groups=None):
@@ -19,7 +21,7 @@ class OnCourseMixin:
         never (as far as I can think) need to be accessed together, so they
         are not an attribute of the helper class.
         """
-        STUDENTS = []
+        STUDENTS = {}
         HOMEROOMS = {}
         with open(student_data, 'r', encoding='utf8') as csvfile:
             rd = csv.reader(csvfile, delimiter=',')
@@ -31,17 +33,17 @@ class OnCourseMixin:
                     grade,
                     homeroom,
                     email
-                )  = row
+                ) = row
                 student = Student(
-                        {
-                            'first_name': first,
-                            'last_name': last,
-                            'grade_level': grade,
-                            'homeroom': homeroom,
-                            'email': email
-                        }
-                    )
-                STUDENTS.append(student)
+                    {
+                        'first_name': first,
+                        'last_name': last,
+                        'grade_level': grade,
+                        'homeroom': homeroom,
+                        'email': email
+                    }
+                )
+                STUDENTS[first + ' ' + last] = student
                 if homeroom not in HOMEROOMS:
                     HOMEROOMS[homeroom] = Homeroom(
                         homeroom,
@@ -76,9 +78,16 @@ class OnCourseMixin:
                 clean_context = {}
                 # find student object match
                 student = self.find_nearest_match(
-                    [raw_context['student']],
+                    raw_context['student'],
                     auto_yes=True
-                )[0]
+                )
+                if not student:
+                    continue
+                if student.name != raw_context['student']:
+                    raise Exception(
+                        f"Integrity error. {student.name} does not equal "
+                        + raw_context['student']
+                    )
                 clean_context['student'] = student
                 for k, v in raw_context.items():
                     # clean phone numbers
