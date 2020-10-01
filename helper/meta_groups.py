@@ -1,6 +1,5 @@
 from time import sleep
 
-raise Exception('Revise to use selenium.')
 
 
 class MetaGroup:
@@ -17,6 +16,7 @@ class MetaGroup:
         Adds students to classroom. By clicking away.
         """
 
+        raise Exception('Revise to use selenium.')
         """
         Old code that uses pyautogui dependency, which I've removed.
         pg.PAUSE = 1

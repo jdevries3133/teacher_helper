@@ -1,28 +1,24 @@
-import os
-import re
-from time import sleep
-import sys
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import (
-    StaleElementReferenceException,
-    TimeoutException,
-    NoSuchElementException
-)
-
 from .exceptions import (
     InvalidViewError,
     CAException,
     AssignmentNamingConflict
 )
+from selenium.common.exceptions import (
+    StaleElementReferenceException,
+    TimeoutException,
+    NoSuchElementException
+)
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium import webdriver
+from time import sleep
+import re
 
 
 class ClassroomAutomator:
-    def __init__(self, username, password):
+    def __init__(self, username: str, password: str):
         self.username = username
         self.password = password
         self.driver = webdriver.Firefox()
@@ -99,7 +95,6 @@ class ClassroomAutomator:
             base = '/'.join(parts[:sep]) + '/'
             av_url = base + f'g/tg/{parts[sep+1]}/{parts[sep+3]}'
             self.driver.get(av_url)
-            self._get_assignment_view_context()
 
     def download_document_as(self, download_type):
         if self.current_view != 'assignment_feedback':
@@ -155,7 +150,7 @@ class ClassroomAutomator:
             span_with_assignment_name = el[0]
         except IndexError:
             if raise_exception:
-                raise Exception(
+                raise CAException(
                     f'Assignment "{assignment_name}" was not found'
                 )
             name = input(
@@ -240,39 +235,6 @@ class ClassroomAutomator:
         self.driver.get(
             f'https://classroom.google.com/u/{mo[1]}/w/{mo[3]}'
         )
-
-    def _get_assignment_view_context(self):
-        self.assignment_view_context = {
-            'attachments': []
-        }
-        # need to figure out if there is one or multiple drive attachments
-        common_parent = '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/div/div[1]/div[2]/div/div[2]/div/div/div'
-        single_assignment_label = '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/div/div[1]/div[2]/div/div[2]/div/div/div/span/div[2]/div/span[2]'
-        multiple_assignment_labels = '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/div/div[1]/div[2]/div/div[2]/div/div/div/div/span/div/div/span[2]'
-        parent = WebDriverWait(self.driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, common_parent))
-        )
-        try:
-            label_el = self.driver.find_element_by_xpath(
-                single_assignment_label
-            )
-            self.assignment_view_context['has_multiple_attachments'] = False
-            self.assignment_view_context['attachment_name'] = label_el.text
-            self.assignment_view_context['attachments'].append(
-                {'name': label_el.text, 'xpath': single_assignment_label})
-        except NoSuchElementException:
-            label_els = self.driver.find_elements_by_xpath(
-                multiple_assignment_labels
-            )
-            self.assignment_view_context['has_multiple_attachments'] = True
-            for el in label_els:
-                print('navigate to click element')
-                breakpoint()
-        all_names = '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[1]/div/div[1]/div[1]/div/span/div/div[1]'
-        name_els = self.driver.find_elements_by_xpath(all_names)
-        for el in name_els:
-            if el.get_attribute('visibility') != 'hidden':
-                breakpoint()
 
     def _update_assignment_view_context(self):
         pass
