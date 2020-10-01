@@ -1,8 +1,10 @@
+from pathlib import Path
 import os
 from helper.ClassroomAutomator import FeedbackAutomator
+from helper import Helper
 
 
-if __name__ == '__main__':
+if __name__ == '':
     atm = FeedbackAutomator(
         os.getenv('EMAIL_USERNAME'),
         os.getenv('EMAIL_PASSWORD_RAW'),
@@ -13,3 +15,6 @@ if __name__ == '__main__':
     )
     for driver, context in atm.iter_assess():
         breakpoint()
+
+if __name__ == '__main__':
+    Helper.new_school_year(Path('student.csv'), Path('guardian.csv'))
