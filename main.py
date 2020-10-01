@@ -1,11 +1,11 @@
 import os
-from pathlib import Path
-from helper import Helper
 from helper.ClassroomAutomator import FeedbackAutomator
+
 
 class MyAutomator(FeedbackAutomator):
     def assess(self):
         pass
+
 
 if __name__ == '__main__':
     atm = MyAutomator(

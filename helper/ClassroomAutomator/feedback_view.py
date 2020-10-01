@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 import re
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
-import pyautogui as pg
+# from selenium import webdriver
+# from selenium.webdriver.common.by import By
+# from selenium.webdriver.support.ui import WebDriverWait
+# from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.common.keys import Keys
+# from selenium.common.exceptions import StaleElementReferenceException, TimeoutException
+# import pyautogui as pg
 
 from .automator import ClassroomAutomator
 from .exceptions import ClassroomNameException

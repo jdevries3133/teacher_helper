@@ -19,15 +19,22 @@ accessed later by the comment bank.
 import time
 import os
 
-import pyautogui as pg
-import pyperclip as pc
-
 from helper import Helper
 from helper.ClassroomAutomator import Automator
 
 ASSIGNMENT_NAME = 'Reverse, Reverse!'
 GRADE_LEVEL = '5'
 GOOGLE_DOC_SCROLL = 200
+
+raise Exception(
+    'Module dependent on pyautogui, which has been removed.'
+    'functionality moved to ClassroomAutomator module using selenium only.'
+)
+
+
+
+
+"""
 
 def comment_bank(ind, st):
     comments = [
@@ -52,13 +59,13 @@ def comment_bank(ind, st):
         return ''
 
 def feedback_loop(st):
-    """
+    ""
     returns 'c' for continue, or 'b' for break. When you get to the end
     of students who have completed their assignments, you may want to
     skip to the next homeroom. That can be accomplished by simply entering
     'b' for break. As a result, the function will return 'b', and the loop
     within which it is placed can be told to break.
-    """
+    ""
     pg.PAUSE = 1
     while True:
         if st.outside_work:
@@ -109,10 +116,10 @@ def return_work(assignment_name, grade_level: str):
     automator.driver.close()
 
 def assignment_feedback_loop(helper, assignment_name, grade_level: str, scroll=0, start_on=0):
-    """
+    ""
     Assignment name must be exactly correct, case sensitive. There is no error
     handling.
-    """
+    ""
     st_set = [st for st in helper.students if st.grade_level == grade_level]
     for st in st_set:
         if not hasattr(st, 'outside_work'):
@@ -160,3 +167,4 @@ def main(helper, ASSIGNMENT_NAME, GRADE_LEVEL, GOOGLE_DOC_SCROLL=0):
 if __name__ == "__main__":
     helper = Helper.read_cache()
     main(helper, ASSIGNMENT_NAME, GRADE_LEVEL, GOOGLE_DOC_SCROLL)
+    """

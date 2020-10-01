@@ -1,5 +1,7 @@
-import csv
+import logging
+from datetime import datetime
 import json
+from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
@@ -13,6 +15,7 @@ from ..csv_parsers import (
     parse_group,
 )
 from ..json_parsers import assignment_participation_audit
+
 
 class EndOfSchoolYearMixin:
     def __init__(self, homerooms=None, students=None, groups=None):
@@ -72,8 +75,7 @@ class EndOfSchoolYearMixin:
                 sheet.cell(row, average_column).value = average
         OUT.save(filename=output_path)
 
-    
-    def match_assgt_with_students(self, context):
+    def match_assgt_with_students(self, helper, context, flipgrid_csv_path, edpuzzle_csv_path):
         """
         This function needs a good amount of context:
         'flipgrid_assignments' and 'edpuzzle_assignments':
@@ -83,7 +85,7 @@ class EndOfSchoolYearMixin:
             objects.
         'epoch_cutoff': integer -- epoch timestamp before which assignments will be ignored.
         """
-        # expect 
+        # expect
         FLIPGRID_ASSIGNMENTS = [i[0] for i in context['flipgrid_assignments']]
         EDPUZZLE_ASSIGNMENTS = [i[0] for i in context['edpuzzle_assignments']]
         EPOCH_CUTOFF_TIME = context['epoch_cutoff']
@@ -99,7 +101,8 @@ class EndOfSchoolYearMixin:
                     hr.json = homeroom
                 continue
             try:
-                teacher = [hr for hr in helper.homerooms if hr.teacher == teacher_name][0]
+                teacher = [
+                    hr for hr in helper.homerooms if hr.teacher == teacher_name][0]
             except:
                 breakpoint()
             teacher.json = homeroom
@@ -109,7 +112,8 @@ class EndOfSchoolYearMixin:
             with open(hr_json, 'r') as jsn:
                 gc_data = json.load(jsn)
                 for post in gc_data['posts']:
-                    post_epoch = datetime.strptime(post['creationTime'], '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
+                    post_epoch = datetime.strptime(
+                        post['creationTime'], '%Y-%m-%dT%H:%M:%S.%fZ').timestamp()
                     if post_epoch < EPOCH_CUTOFF_TIME:
                         continue
                     try:
@@ -117,7 +121,8 @@ class EndOfSchoolYearMixin:
                     except KeyError:
                         try:
                             post['courseWork']
-                            logging.error(f'Post with coursework has no submission attached\n\t{post}["courseWork"]')
+                            logging.error(
+                                f'Post with coursework has no submission attached\n\t{post}["courseWork"]')
                             continue
                         except KeyError:
                             continue
@@ -128,19 +133,23 @@ class EndOfSchoolYearMixin:
                     for submission in post['courseWork']['submissions']:
                         try:
                             student_name = submission['student']['profile']['name']['fullName']
-                            st = helper.find_nearest_match([student_name], debug=True)[0]
+                            st = helper.find_nearest_match(student_name)
                             # switch based on assignment type
                             if assignment_title in FLIPGRID_ASSIGNMENTS:
-                                subm = FlipgridSubmission(assignment_title, submission, st)
+                                subm = FlipgridSubmission(
+                                    assignment_title, submission, st, flipgrid_csv_path)
                                 st.assignments.setdefault(subm.title, subm)
                             elif assignment_title in EDPUZZLE_ASSIGNMENTS:
-                                subm = EdpuzzleSubmission(assignment_title, submission, st)
+                                subm = EdpuzzleSubmission(
+                                    assignment_title, submission, st, edpuzzle_csv_path)
                                 st.assignments.setdefault(subm.title, subm)
                             else:
-                                subm = AssignmentSubmission(assignment_title, submission)
+                                subm = AssignmentSubmission(
+                                    assignment_title, submission)
                                 st.assignments.setdefault(subm.title, subm)
                         except KeyError:
-                            logging.debug(f'Not a coursework post: {submission}')
+                            logging.debug(
+                                f'Not a coursework post: {submission}')
                             continue
                         if not 'comments' in submission:
                             continue

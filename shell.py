@@ -1,4 +1,4 @@
-#!/Users/JohnDeVries/repos/teacher_helper/venv/bin/python3.7
+#!/Users/JohnDeVries/repos/teacher_helper/venv/bin/python3.8
 import code
 import os
 import sys

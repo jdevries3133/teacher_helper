@@ -1,5 +1,6 @@
 from time import sleep
-import pyautogui as pg
+
+raise Exception('Revise to use selenium.')
 
 
 class MetaGroup:
@@ -7,6 +8,7 @@ class MetaGroup:
     There are currently separate classes for homerooms and extracurricular
     activities. This meta class contains methods that apply to any type of group.
     """
+
     def __init__(self):
         pass
 
@@ -15,6 +17,8 @@ class MetaGroup:
         Adds students to classroom. By clicking away.
         """
 
+        """
+        Old code that uses pyautogui dependency, which I've removed.
         pg.PAUSE = 1
         def mvclc(x, y):
             pg.moveTo(x, y)
@@ -26,14 +30,14 @@ class MetaGroup:
                 raise Exception(f'No email address for {st.name}')
             pg.moveTo(978, 463)
 
-            """
+            ""
             THIS IS USELESS
 
             paste_this = '\n'.join([st.email for s in students])
 
             Just make sure to scrub with a regex or something, because otherwise
             it won't work right.
-            """
+            ""
 
             pg.click()
             pg.click()
@@ -44,6 +48,7 @@ class MetaGroup:
             sleep(5)
 
         return 0
+        """
 
     def add_to_classroom(self, username, password):
         """
@@ -51,6 +56,5 @@ class MetaGroup:
 
         Who knows if I really need username and password
         """
-
 
         session = GoogleClassroom(username, password)
