@@ -1,8 +1,6 @@
-from .exceptions import (
-    InvalidViewError,
-    CAException,
-    AssignmentNamingConflict
-)
+from time import sleep
+import re
+
 from selenium.common.exceptions import (
     StaleElementReferenceException,
     TimeoutException,
@@ -13,8 +11,12 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium import webdriver
-from time import sleep
-import re
+
+from .exceptions import (
+    InvalidViewError,
+    CAException,
+    AssignmentNamingConflict
+)
 
 
 class ClassroomAutomator:
@@ -235,6 +237,3 @@ class ClassroomAutomator:
         self.driver.get(
             f'https://classroom.google.com/u/{mo[1]}/w/{mo[3]}'
         )
-
-    def _update_assignment_view_context(self):
-        pass
