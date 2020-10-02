@@ -17,4 +17,6 @@ if __name__ == '':
         breakpoint()
 
 if __name__ == '__main__':
-    Helper.new_school_year(Path('student.csv'), Path('guardian.csv'))
+    helper = Helper.new_school_year(Path('student.csv'), Path(
+        'guardian.csv'))
+    helper.write_cache()

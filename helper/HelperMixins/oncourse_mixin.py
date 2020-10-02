@@ -15,6 +15,7 @@ class IterCsv:
         the key is one of the acceptable headers, and the value is the
         index at which that header field can be found in each row.
         """
+        self.current_row = 0
         self.rows = rows
         self.context = {}
         # assign context
@@ -27,7 +28,7 @@ class IterCsv:
                     after = len(self.context)
                     if before == after:
                         raise Exception(
-                            f'Two headers matched the acceptable_header:\t'
+                            'Two headers matched the acceptable_header:\t'
                             + clean_header
                             + '\nIf raw header matching is to lenient, set strict=True'
                         )
@@ -41,14 +42,15 @@ class IterCsv:
                             f'{raw_header}. Edit the csv to differentiate'
                             'between these columns to continue.'
                         )
-        self.current_row = 0
 
     def __iter__(self):
         return self
 
     def __next__(self):
         self.current_row += 1
-        return self.context, self.rows[self.current_row]
+        if self.current_row < len(self.rows) - 1:
+            return self.context, self.rows[self.current_row]
+        raise StopIteration
 
 
 class OnCourseMixin:
@@ -58,7 +60,7 @@ class OnCourseMixin:
         self.groups = groups
 
     @classmethod
-    def new_school_year(cls, student_data, guardian_data):
+    def new_school_year(cls, student_data, guardian_data, strict_headers=False):
         """
         Instantiates guardians as an attribute of students. All guardians will
         never (as far as I can think) need to be accessed together, so they
@@ -74,17 +76,22 @@ class OnCourseMixin:
                 'last name',
                 'grade level',
                 'homeroom teacher',
-                'email address'
+                'email address',
             ]
-            for context, row in IterCsv(acceptable_headers, rows):
-                breakpoint()
+            for context, row in IterCsv(acceptable_headers, rows, strict=strict_headers):
                 (
                     first,
                     last,
                     grade,
                     homeroom,
                     email
-                ) = row
+                ) = (
+                    row[context['first name']],
+                    row[context['last name']],
+                    row[context['grade level']],
+                    row[context['homeroom teacher']],
+                    row[context['email address']],
+                )
                 student = Student(
                     {
                         'first_name': first,
@@ -108,23 +115,37 @@ class OnCourseMixin:
             HOMEROOMS, STUDENTS
         )
         with open(guardian_data, 'r', encoding='utf8') as csvfile:
-            rd = csv.reader(csvfile)
-            next(rd)  # skip header
-            for row in rd:
+            rows = [r for r in csv.reader(csvfile)]
+            acceptable_headers = [
+                'guardian first name',
+                'guardian last name',
+                'student first name',
+                'student last name',
+                'primary contact',
+                'guardian email address',
+                'guardian mobile phone',
+                'guardian phone',
+                'guardian work phone',
+                'comments',
+                'allow contact',
+                'student resides with',
+                'relation to student'
+            ]
+            for context, row in IterCsv(acceptable_headers, rows, strict=strict_headers):
                 # create raw context dict of all strings
                 raw_context = {
-                    'first_name': row[0],
-                    'last_name': row[1],
-                    'student': row[2] + ' ' + row[3],
-                    'primary_contact': row[4],
-                    'email': row[5],
-                    'mobile_phone': row[6],
-                    'home_phone': row[7],
-                    'work_phone': row[8],
-                    'comments': row[9],
-                    'allow_contact': row[10],
-                    'student_resides_with': row[11],
-                    'relationship_to_student': row[12],
+                    'first_name': row[context.get('guardian first name')],
+                    'last_name': row[context.get('guardian last name')],
+                    'student': row[context.get('student first name')] + ' ' + row[context.get('student last name')],
+                    'primary_contact': row[context.get('primary contact')],
+                    'email': row[context.get('guardian email address')],
+                    'mobile_phone': row[context.get('guardian mobile phone')],
+                    'home_phone': row[context.get('guardian phone')],
+                    'work_phone': row[context.get('guardian work phone')],
+                    'comments': row[context.get('comments')],
+                    'allow_contact': row[context.get('allow contact')],
+                    'student_resides_with': row[context.get('student resides with')],
+                    'relationship_to_student': row[context.get('relation to student')],
                 }
                 clean_context = {}
                 # find student object match

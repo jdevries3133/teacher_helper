@@ -39,19 +39,23 @@ class Paychex:
     selected.
     """
 
-    def __init__(self, username, password):
+    def __init__(self, username, password, headless=True):
         self.username = username
         self.password = password
+        self.headless = headless
         self.is_logged_in = False
         self.clock_state_file = CLOCK_STATE_FILE
         self.clock_state = self.get_clock_state()
         self.driver = None  # launched in __enter__
 
     def __enter__(self, *args, **kwargs):
-        chrome_options = Options()
-        chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--window-size=1440x789')
-        self.driver = webdriver.Chrome(options=chrome_options)
+        if self.headless:
+            chrome_options = Options()
+            chrome_options.add_argument('--headless')
+            chrome_options.add_argument('--window-size=1440x789')
+            self.driver = webdriver.Chrome(options=chrome_options)
+            return self
+        self.driver = webdriver.Firefox()
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):

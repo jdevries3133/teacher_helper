@@ -39,17 +39,17 @@ the variable name "helper". All attributes and methods are accessible.
 
 A class that encapsulates homerooms, students, extracurricular groups, and parent contacts.
 
-### helper.new_school_year(cls, student_data, guardian_data)
+**`helper.new_school_year(cls, student_data, guardian_data, strict_headers=False)`**
 
-Class method inherited from `helper/HelperMixins/oncourse_mixin.py`. The student_data csv should have the following columns in the following order:
+Class method inherited from `helper/HelperMixins/oncourse_mixin.py`. The student_data csv should have the following columns:
 
 - first name
 - last name
 - grade level
-- homeroom
-- email
+- homeroom teacher
+- email address
 
-The guardian_data csv should have the following columns in the following order:
+The guardian_data csv should have the following columns:
 
 - first name
 - last name
@@ -64,15 +64,14 @@ The guardian_data csv should have the following columns in the following order:
 - student resides with
 - relationship to student
 
-These reports can be easily exported from OnCourse, and by passing them into this function, the helper class will be fully instantiated.
+These reports can be easily exported from OnCourse, and by passing them into this function, the helper class will be instantiated.
 
 ## Helper Class Methods
 
 ### find_nearest_match(self, student_names)
 
-Takes a list of student names and returns a list of Student instances which
-are a part of self.students(). Asks for the user's help in the command line unless
-a single perfect match is found. Manipulations to these students will cascade.
+Takes a student name and returns a Student instances. Asks for the user input
+to confirm the nearest match if no exact match is found.
 
 <br />
 
@@ -82,12 +81,12 @@ a single perfect match is found. Manipulations to these students will cascade.
 
 ### Overview
 
-Paychex class can clock in and out of paychex. `__init__` takes two positional
-arguments; `username`, and `password`.
+Paychex class can clock in and out of paychex using headless Google Chrome,
+selenium, and chromedriver.
 
 ### Methods
 
-**`self.clock()`**
+**`self.clock(self)`**
 
 This is the primary top-level function – the one that is called by passing
 "clock" as a single argument to the shell. It takes into consideration the time
@@ -95,12 +94,15 @@ of day, cached clock state, and real site state, and makes a determination about
 whether to press the button or not. It then updates the clock state and closes
 the headless browser.
 
-**`self.login()`**
+**`self.login(self)`**
 
 Launch headless chrome and login to paychex. Unless you setup the Imap module
-to get your OTP from your email, you will have to input it.
+to get your OTP from your email, you will have to input it. This method does
+not necessarily need to be called, because functions that require you to login
+are protected by the `@login_first` decorator, which checks for `self.is_logged_in`
+and calls this method if not.
 
-**`self.clock_in()`**
+**`self.clock_in(self)`**
 
 Clock in. The @login_first decorator is applied, so if you haven't done that yet,
 it will happen upon calling this method.
@@ -110,20 +112,20 @@ DOM and checks if you're already clocked in. It may push the button, or may just
 close the borwser if you're already clocked in. Either way,
 **you will be clocked in when all is said and done**
 
-**`self.clock_out()`**
+**`self.clock_out(self)`**
 
 Same as clock in, but clock out.
 
-**`self.get_clock_state()`**
+**`self.get_clock_state(self)`**
 
 This returns the **LOCALLY CACHED** clock state. Can be used to check whether
 the Browser should be opened.
 
-**`self.set_clock_state()`**
+**`self.set_clock_state(self)`**
 
 This opens the browser, logs in, and gets the clock state from the website.
 It does not take any arguments, or allow the state to by manually overridden.
 
-**`@login_first decorator`**
+**`@ login_first` decorator**
 
 These methods will check whether `self.is_logged_in` is true.
