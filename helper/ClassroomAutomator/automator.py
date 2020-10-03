@@ -2,9 +2,7 @@ from time import sleep
 import re
 
 from selenium.common.exceptions import (
-    StaleElementReferenceException,
     TimeoutException,
-    NoSuchElementException
 )
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
@@ -99,6 +97,9 @@ class ClassroomAutomator:
             self.driver.get(av_url)
 
     def download_document_as(self, download_type):
+        """
+        Download the current document in a given file format.
+        """
         if self.current_view != 'assignment_feedback':
             raise InvalidViewError(
                 'Document must be downloaded from assignment feedback view'
@@ -126,10 +127,14 @@ class ClassroomAutomator:
         Must be called when the current view is classwork or classroom. Can be
         accessed through self.navigate_to('assignment' assignment_name=name)
         """
+        if self.current_view != 'classroom' and self.current_view != 'classwork':
+            raise Exception(
+                'Must be called when the current view is classwork or classroom'
+            )
         if self.current_view != 'classwork':
             self.navigate_to('classwork')
         spans_with_assignment_names = WebDriverWait(
-            self.driver, 20
+            self.driver, 40
         ).until(
             EC.presence_of_all_elements_located(
                 (
@@ -165,7 +170,7 @@ class ClassroomAutomator:
                 self._get_assignment_url(name)
             else:
                 sleep(2)
-                self._get_assignment_url(assignment_name, raise_exception=True)
+                return self._get_assignment_url(assignment_name, raise_exception=True)
         span_with_assignment_name.click()
         # might need try/catch if it happens too fast; need to see what error is
         # first.
@@ -214,7 +219,8 @@ class ClassroomAutomator:
                     'assignment.'
                 )
             if self.current_view == 'classroom':
-                self.navigate_to('classwork')
+                self.navigate_to(
+                    'classwork', classroom_name=kwargs.get('classroom_name'))
         else:
             raise CAException(
                 'Error in _validate_view(), validation not performed on view:\n'

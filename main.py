@@ -1,22 +1,18 @@
-from pathlib import Path
 import os
 from helper.ClassroomAutomator import FeedbackAutomator
-from helper import Helper
 
 
-if __name__ == '':
+if __name__ == '__main__':
     atm = FeedbackAutomator(
         os.getenv('EMAIL_USERNAME'),
         os.getenv('EMAIL_PASSWORD_RAW'),
-        'Monday 9/28 Attendance Question',
+        'Getting Started with Written Music',
         (
-            'Geltzeiler_HR_4B\n2020-2021',
+            'DeVries_Music_5_Curtis_Institute_of_Music',
+            'DeVries_Music_4_Curtis_Institute_of_Music',
         ),
+        only_turned_in=True
     )
-    for driver, context in atm.iter_assess():
-        breakpoint()
-
-if __name__ == '__main__':
-    helper = Helper.new_school_year(Path('student.csv'), Path(
-        'guardian.csv'))
-    helper.write_cache()
+    for driver, context in atm:
+        for a in context.attachments:
+            print(a['name'])
