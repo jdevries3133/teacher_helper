@@ -104,7 +104,9 @@ class EndOfSchoolYearMixin:
                 teacher = [
                     hr for hr in helper.homerooms if hr.teacher == teacher_name][0]
             except:
-                breakpoint()
+                raise Exception(
+                    f'jack: Not yet implemented\n\nLocals dump:\n\n{locals()}'
+                )
             teacher.json = homeroom
         # iterate through google classroom objects
         assignments = set()

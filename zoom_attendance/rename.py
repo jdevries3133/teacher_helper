@@ -21,6 +21,6 @@ for i in os.listdir('.'):
         start_time = data[1][2]
         date = start_time.split(' ')[0].replace('/', '-')
     except IndexError:
-        breakpoint()
+        raise Exception('jack: Not yet implemented')
     new_name = topic + ' ' + date + '.csv'
     os.rename(i, new_name)

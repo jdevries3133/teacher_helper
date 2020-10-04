@@ -120,7 +120,7 @@ class ClassroomAutomator:
         )
         inp.send_keys(download_queries[download_type] + u'\ue007')
         inp.clear()
-        breakpoint()
+        raise Exception('jack: Not yet implemented.')
 
     def _get_assignment_url(self, assignment_name, raise_exception=False):
         """
