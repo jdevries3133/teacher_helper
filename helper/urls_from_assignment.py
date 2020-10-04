@@ -42,7 +42,7 @@ def get_url_from_classroom_json(helper, good_regex, miss_regex):
                 break
             else:
                 print(hr)
-                breakpoint()
+                raise Exception('jack: Not yet implemented')
         for post in cls_obj['posts']:
             if 'courseWork' in post:
                 if post['courseWork']['title'] == 'Make a Song for the Song Maker Gallery!!':
