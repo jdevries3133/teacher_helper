@@ -92,6 +92,11 @@ class OnCourseMixin:
                     row[context['homeroom teacher']],
                     row[context['email address']],
                 )
+                # convert grade to int
+                for i in [4, 5, 6]:
+                    if grade.find(str(i)) != -1:
+                        grade = i
+                        break
                 student = Student(
                     {
                         'first_name': first,
@@ -133,6 +138,8 @@ class OnCourseMixin:
             ]
             for context, row in IterCsv(acceptable_headers, rows, strict=strict_headers):
                 # create raw context dict of all strings
+                if not context.get('student resides with'):
+                    raise Exception('Remember, this is misspelled in OnCourse')
                 raw_context = {
                     'first_name': row[context.get('guardian first name')],
                     'last_name': row[context.get('guardian last name')],
