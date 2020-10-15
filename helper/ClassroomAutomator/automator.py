@@ -161,8 +161,8 @@ class ClassroomAutomator:
                     f'Assignment "{assignment_name}" was not found'
                 )
             name = input(
-                f'The assignment name {assignment_name} was not found in the '
-                'google classroom. Press enter to try again, or if '
+                f'{assignment_name} was not found in the '
+                'google classroom. Press enter to try again.\n\nIf '
                 f'{assignment_name} is incorrect, enter the correct name and '
                 'press enter.'
             ).strip()
