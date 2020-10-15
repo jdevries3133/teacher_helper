@@ -55,4 +55,4 @@ class ParentGuardian:
             f'Email Address: {self.email}',
             '\n',
         ]
-        return '\n'.join(['\t' + str(i) for i in outs if i])
+        return '\n'.join([str(i) for i in outs if i])

@@ -1,10 +1,13 @@
 #!/Users/JohnDeVries/repos/teacher_helper/venv/bin/python3.8
 import code
 import os
+from time import sleep
 import sys
 import webbrowser
 from helper import Helper
 from helper.paychex import Paychex
+
+from update_reports import all_ as update_all_reports
 
 
 class ShellUtils:
@@ -17,13 +20,11 @@ class ShellUtils:
         if '-h' in self.args or 'help' in self.args:
             self.print_help()
             sys.exit()
-        if '-v' in self.args:
-            verbose = True
-        else:
-            verbose = False
+        verbose = '-v' in self.args
         if len(self.args) < 2:
             helper = self.check_cache()
             code.interact(local={'helper': helper})
+            sys.exit()
         if self.args[1] == 'student':
             try:
                 self.student_search(
@@ -34,19 +35,12 @@ class ShellUtils:
                 self.improper_usage()
         elif self.args[1] == 'clock':
             self.clock()
+            sleep(1)
         # silly timer
-        if self.args[1] == 'timer':
-            try:
-                msg = ' '.join(self.args[3:])
-                if not msg:
-                    msg = input(
-                        'Enter a message to be spoken after the timer is finished\n'
-                    )
-                Helper().timer(int(self.args[2]), msg)
-            except (IndexError, TypeError):
-                self.improper_usage()
+        elif self.args[1] == 'timer':
+            self.silly_timer()
         # quick open google classrooms by tag name
-        if self.args[1] == 'gc':
+        elif self.args[1] == 'gc':
             valid_tags = {
                 '6': 'https://classroom.google.com/u/0/c/MTU4NTE3OTg5MDc0',
                 '5': 'https://classroom.google.com/u/0/c/MTU4NTE3OTg5MDMz',
@@ -60,6 +54,8 @@ class ShellUtils:
                     'Invalid google classroom tag name. Acceptable tags are:\n'
                     + '\t'.join(valid_tags.keys())
                 )
+        elif self.args[1] == 'report':
+            update_all_reports()
 
     def student_search(self, name, verbose=False):
         'Search for student, print basic student info.'
@@ -71,10 +67,21 @@ class ShellUtils:
             print(f'Student {sys.argv[2]} was not found.')
             sys.exit()
 
+    def silly_timer(self):
+        try:
+            msg = ' '.join(self.args[3:])
+            if not msg:
+                msg = input(
+                    'Enter a message to be spoken after the timer is finished\n'
+                )
+            Helper().timer(int(self.args[2]), msg)
+        except (IndexError, TypeError):
+            self.improper_usage()
+
     @ staticmethod
     def clock(u=None, p=None):
         if not u:
-            u = os.getenv('PAYCHEX_USR'),  # username
+            u = os.getenv('PAYCHEX_USR')  # username
         if not p:
             p = os.getenv('PAYCHEX_PASS')  # password
         with Paychex(u, p) as pcx:

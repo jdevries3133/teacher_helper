@@ -32,22 +32,12 @@ class Student:
             '--'
             '\nGuardians:'
         ]
-        data = [str(i) for i in data if i]  # filter out none
+        student_data = [str(i) for i in data if i]  # filter out NoneTypes
         if not self.guardians:
             return '\n'.join(data)
-        gu_data = [self.primary_contact]
-        cutoff = 2 if not verbose else len(self.guardians)
-        for gu in self.guardians[1:]:
-            raw = [
-                '...',
-                gu.relationship_to_student,
-                gu.name,
-                f'Contact allowed: {gu.allow_contact}',
-                f'Is primary contact: {gu.primary_contact}',
-                gu.mobile_phone,
-                gu.email,
-                '\n',
-            ]
-            app = ['\t' + str(i) for i in raw[1:] if i]
-            gu_data += app
-        return '\n'.join(data + gu_data)
+        # indent
+        gu_data = ['\n\t'.join(self.primary_contact.__str__().split('\n'))]
+        cutoff = 3 if not verbose else len(self.guardians) - 1
+        for gu in self.guardians[1:cutoff]:
+            gu_data.append('\n\t'.join(gu.__str__().split('\n')))
+        return '\n'.join(student_data + gu_data)

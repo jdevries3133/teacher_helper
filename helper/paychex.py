@@ -53,7 +53,8 @@ class Paychex:
             chrome_options = Options()
             chrome_options.add_argument('--headless')
             chrome_options.add_argument('--window-size=1440x789')
-            self.driver = webdriver.Chrome(options=chrome_options)
+            # self.driver = webdriver.Chrome(options=chrome_options)
+            self.driver = webdriver.Firefox()
             return self
         self.driver = webdriver.Firefox()
         return self
@@ -245,12 +246,10 @@ class Paychex:
 
         Returns clock state after button press.
         """
-        if not self.is_logged_in:
-            raise Exception(
-                'Cannot read site before login'
-            )
-        WebDriverWait(self.driver, 10).until(EC.presence_of_element_located(
-            (By.XPATH, '//*[@id="stackedinvisibilebutton"]'))).click()
+        clock_button = WebDriverWait(self.driver, 40).until(EC.presence_of_element_located(
+            (By.XPATH, '//*[@id="stackedinvisibilebutton"]')))
+        sleep(1)
+        clock_button.click()
         return self._read_site_state()
 
     def _read_site_state(self):
@@ -262,7 +261,7 @@ class Paychex:
             raise Exception(
                 'Cannot read site before login'
             )
-        status = WebDriverWait(self.driver, 35).until(
+        status = WebDriverWait(self.driver, 60).until(
             EC.presence_of_element_located((By.XPATH, '//*[@id="employeeStatus"]'))).text
         if status == 'Clocked Out':
             return 'out'
