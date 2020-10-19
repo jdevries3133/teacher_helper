@@ -37,6 +37,7 @@ class Meeting:
         - datetime
 
     """
+
     def __init__(self, path: Path):
         self.path = path
         self.attendees = []
@@ -45,6 +46,13 @@ class Meeting:
         self.topic = None
         self.total_participants = None
         self.open_report()
+
+    def __repr__(self):
+        outstr = (
+            f'<helper.zoom_attendance_report.Meeting; {self.topic} at '
+            f'{self.datetime.isoformat()}>'
+        )
+        return outstr
 
     def open_report(self):
         """
@@ -63,6 +71,7 @@ class Meeting:
                 'Grade level is not the first character of the report name.'
             )
         with open(self.path, 'r') as csvfile:
+            breakpoint()
             rows = [r for r in csv.reader(csvfile)]
         if rows[2]:
             raise Exception(
@@ -87,9 +96,14 @@ class Meeting:
         for st in helper.students.values():
             st.zoom_attendance_record = {}
         for row in rows[4:]:
-            name, duration = row[0], row[2]
+            duration = row[2]
             st = self.match_student(row[0])
-            st.zoom_attendance_record.setdefault(self.topic, duration)
+            if not st:
+                continue
+            st.zoom_attendance_record.setdefault(
+                (self.topic + ';' + self.datetime.isoformat()),
+                duration
+            )
             self.attendees.append(st)
 
     def match_student(self, name):
@@ -152,7 +166,6 @@ class Meeting:
                     f'student in the {self.grade_level}th grade has the first '
                     f'name {first_name_match[0][0]}.'
                 )
-                return
 
             # If the first two matches are not the same, that means the first
             # name is unique, and we can make a match within the grade level.
@@ -184,7 +197,7 @@ class MeetingSet:
     Meeting instances. However, group_map may be passed to __init__ to produce
     a more descriptive data structure.
 
-    # group_map: dict
+    # group_map: dict NOT CURRENTLY SUPPORTED
 
     The presumption is that there is no reliable way to know the full name of
     a meeting. For example, the meeting topic might be, "Health," but whoose
@@ -194,17 +207,18 @@ class MeetingSet:
 
     {
         '6th Grade Health 9-24-2020 10:13 am.csv': 'Health; Mrs. Smith's Homeroom',
+        '6th Grade Health 9-25-2020 10:13 am.csv': 'Health; Mrs. Jones's Homeroom',
         'Garbled zoom report filename': 'A Group Label Useful to You'
     }
 
-    You only provide a single association for a REAL group that actually meets
-    together. Every time this class sees that same group (or nearly that same
-    group) together again, it will be able to apply the label you've provided.
-    Now, you have **cls.group_dict['A Group Label Useful to You']**. This
-    returns a chronologically sorted list of Meeting instances of that group
-    only.
+    Effectively, this "tags" one instance of a unique group with a particular
+    name. These similar meeting instances are grouped anyway by default – that's
+    basically the purpose of this class, but by tagging a single instance, you
+    can get back a dict where these groups are named. Of course, it's also
+    possible to just take the groupings from self.groups and assign names
+    afterward yourself.
 
-    # trust_filenames: bool
+    # trust_topics: bool
 
     As I mentioned before, the presumption is that there is no reliable way to
     know the full name of a meeting. Often, teachers' meeting "topics," don't
@@ -214,51 +228,124 @@ class MeetingSet:
     exist.
 
     """
-    def __init__(self, dir_path: Path, group_map=None, trust_filenames=False):
+
+    def __init__(self, dir_path: Path, group_map=None, trust_topics=False):
+        if group_map:
+            raise NotImplementedError(
+                'Group maps are not currently supported. Instead of passing '
+                'in a group map, parse the data from self.groups after calling '
+                'self.process()'
+            )
         self.dir_path = dir_path
         self.group_map = group_map
-        self.trust_filenames = trust_filenames
-        self.process()
+        if group_map:
+            self.group_dict = {}
+        self.trust_topics = trust_topics
+        self.groups = []
+        self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.85
 
     def process(self):
         """
         Called by __init__; produces data structure
         """
-        if not (not self.group_map and self.trust_filenames):
-            self.generate_group_map_from_filenames()
-        for meeting in self.iter_csvs():
-            # TODO calculate union between this and all other meetings
-            # TODO group this meeting with others in self.meetings
-            if self.group_map:
-                # TODO add this meeting to self.group_dict 
-                pass
+        # generate group map from filenames if needed
+        if (not self.group_map and self.trust_topics):
+            self.generate_group_map_from_topics()
 
-    def generate_group_map_from_filenames(self):
+        # init group map; items in group map are pointers to nested lists in
+        # self.groups
+        if self.group_map:
+            for k, v in self.group_map.items():
+                path = Path(self.dir_path, k)
+                self.groups.append(li := [Meeting(path)])
+                self.group_dict[v] = li
+
+        # append all meetings to groupings in self.groups
+        for meeting in self.iter_csvs():
+            match = self.match_meeting_with_group_by_union(meeting)
+            if match:
+                # append to group of similar meetings
+                match.append(meeting)
+            else:
+                # create a new list of meetings if there is no match
+                self.groups.append([meeting])
+
+        # group_map algorithm creates duplicate groups which must be eliminated.
+        # I don't think using a set will prevent it because they are separate
+        # instances of Meeting that point to the same file.
+        if self.group_map:
+            self.eliminate_duplicate_meetings()
+
+    def eliminate_duplicate_meetings(self):
         """
-        If trust_filenames is true and group_map is None, this function
-        generates a group map from the filenames. This function will raise an
+        Eliminate duplicate meeting where there are two meetings with the
+        same path.
+        """
+        for gr in self.groups:
+            for m1 in gr:
+                for m2 in gr:
+                    if m1.path == m2.path:
+                        del m2
+
+    def match_meeting_with_group_by_union(self, meeting: Meeting):
+        """
+        Given a list of students, calculate the union between that list, and
+        all the other lists of students in meetings previously provided.
+
+        Return the group whose union against the provided list is less than the
+        length of the lists combined, indicating that these are two instances
+        of the same group of students meeting.
+        """
+        for group in self.groups:
+            for past_meeting in group:
+                pm__attendees = {s.name for s in past_meeting.attendees}
+                cm__attendees = {s.name for s in meeting.attendees}
+                union = len(pm__attendees | cm__attendees)
+                total = len(pm__attendees) + len(cm__attendees)
+                # Where groups are the same and attendance is perfect,
+                # len(total) / 2 == len(union)
+                # Considering imperfect attendance, the group will be considered
+                # match if the union is less than 85% of the total.
+                # This CONSTANT is definied in __init__
+                if total * self.TOTAL_TO_UNION_RATIO_ADJUSTMENT > union:
+                    print('MATCH\n\n')
+                    print(f'{meeting.topic} matches with {past_meeting.topic}')
+                    print(f'Union = {union}')
+                    print(f'Total = {total}')
+                    return group
+        return []
+
+    def generate_group_map_from_topics(self):
+        """
+        If trust_topics is true and group_map is None, this function
+        generates a group map from the topics. This function will raise an
         exception if it should not have been called.
         """
         # validation
         try:
             assert not self.group_map
-            assert self.trust_filenames
+            assert self.trust_topics
         except AssertionError:
             raise Exception(
-                'Preconditions for generate_group_map_from_filename were not '
-                f'met.\ngroup_map:\t{self.group_map}\n\ntrust_filenames:\t'
-                + self.trust_filenames
+                'Preconditions for generate_group_map_from_topic were not '
+                f'met.\ngroup_map:\t{self.group_map}\n\ntrust_topics:\t'
+                + self.trust_topics
             )
-        # TODO: generate group map from filename
+        self.group_map = {}
+        for path in self.dir_path.iterdir():
+            meeting = Meeting(path)
+            self.group_map.setdefault(path.name, meeting.topic)
+        self.group_dict = {}
+        return self.group_map
 
     def rename_csv_files(self):
         """
-        Provide verbose names to csv file. 
+        Provide verbose names to csv file.
         """
         for report_path in self.dir_path.iterdir():
             with open(report_path, 'r') as csvf:
                 rows = [r for r in csv.reader(csvf)]
-            topic = rows[1][1][:9]
+            topic = rows[1][1]
             start_time = rows[1][2]
             date = start_time.split(' ')[0].replace('/', '-')
             new_name = topic + ' ' + date + '.csv'
@@ -295,8 +382,6 @@ class ZoomAttendanceReport(BaseCsvParser):
         self.grade_level = None
         self.meetings = set()
 
-
-
     def generate_report(self, destination: Path, thresholds=None):
         """
         Master Sheet:
@@ -321,12 +406,12 @@ class ZoomAttendanceReport(BaseCsvParser):
         """
         if not thresholds:
             thresholds = {}
-                        # ATTENDANCE COLORING CONSTANTS
+            # ATTENDANCE COLORING CONSTANTS
         # student's cell will have the following color if they attended for
         # LESS THAN n minutes.
         (
             RED_TIME,
-            YELLOW_TIME 
+            YELLOW_TIME
         ) = (
             thresholds.get('red') if thresholds.get('red') else 0,
             thresholds.get('yellow') if thresholds.get('yellow') else 20
