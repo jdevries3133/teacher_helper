@@ -1,4 +1,3 @@
-import dbm
 import os
 import shelve
 from datetime import datetime
@@ -40,7 +39,7 @@ class Helper(
         threshold below which students will not be included.
         """
         if not len(student_name.split(' ')) > 1 and auto_yes:
-            raise Exception(
+            raise Warning(
                 'If a student\'s full name is not provided, the query result '
                 'will likely have a low confidence and not pass the default '
                 'threshold value of 90. Lowering the threshold value will '
@@ -49,10 +48,9 @@ class Helper(
                 'function if auto_yes is set to true.\n\tThe name provded was:\t'
                 + student_name
             )
-        try:
-            return self.students[student_name]
-        except KeyError:
-            pass
+        # direct match
+        if st := self.students.get(student_name.title()):
+            return st
         closest_name, confidence = process.extractOne(
             student_name,
             self.students.keys()

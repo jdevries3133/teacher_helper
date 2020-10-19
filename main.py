@@ -20,6 +20,7 @@ if __name__ == 'this':
             print(a['name'])
 
 if __name__ == '__main__':
-    helper = Helper.new_school_year(Path('student.csv'), Path(
-        'parent.csv'))
-    helper.write_cache()
+    helper = Helper.new_school_year(
+        Path('data', 'students.csv'), Path('data', 'parents.csv')
+    )
+    breakpoint()
