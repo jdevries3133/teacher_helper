@@ -111,7 +111,6 @@ class Paychex:
                 EC.presence_of_element_located((By.XPATH, '//*[@id="otpCode"]')))
             sleep(10)  # wait for email to be sent before trying to fetch.
             otp = self.get_otp()
-            print(otp)
             two_factor_auth_input.send_keys(otp)
             self.driver.find_element_by_xpath(
                 '/html/body/div[1]/div[2]/div/div/form/div[2]/div/div/button[2]').click()
