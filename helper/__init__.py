@@ -3,7 +3,7 @@ from pathlib import Path
 
 from .helper import Helper
 from .student import Student
-from .zoom_attendance_report import ZoomAttendanceReport
+from .zoom_attendance_report import MeetingSet, ExcelWriter
 
 
 REQUIRED_VARS = [
