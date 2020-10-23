@@ -4,10 +4,13 @@ import os
 from time import sleep
 import sys
 import webbrowser
+import subprocess
+from pathlib import Path
+
+from fuzzywuzzy import process
+
 from helper import Helper
 from helper.paychex import Paychex
-
-from update_reports import all_ as update_all_reports
 
 
 class ShellUtils:
@@ -27,10 +30,12 @@ class ShellUtils:
             sys.exit()
         if self.args[1] == 'student':
             try:
-                self.student_search(
+                st = self.student_search(
                     ' '.join([i for i in self.args[2:] if i != '-v']),
                     verbose=verbose
                 )
+                print(st)
+                sys.exit()
             except IndexError:
                 self.improper_usage()
         elif self.args[1] == 'clock':
@@ -54,18 +59,80 @@ class ShellUtils:
                     'Invalid google classroom tag name. Acceptable tags are:\n'
                     + '\t'.join(valid_tags.keys())
                 )
+        # search for student by parent
+        elif self.args[1] == 'parent':
+            try:
+                match = self.search_by_parent(
+                    ' '.join([a for a in self.args[2:] if a != '-v'])
+                )
+                if match:
+                    print(match)
+            except IndexError:
+                self.improper_usage()
         elif self.args[1] == 'report':
-            update_all_reports()
+            try:
+                st = self.check_cache().find_nearest_match(
+                    ' '.join([i for i in self.args[2:] if i != '-v']),
+                    auto_yes=True,
+                    threshold=60
+                )
+                print('-' * 30 + 'Contact' + '-' * 30)
+                print(st)
+                print('-' * 30 + 'Zoom Attendance' + '-' * 30)
+                zoom_reports_dir = Path(
+                    Path(__file__).parent, 'data', 'zoom_attendance_reports/'
+                )
+                out = subprocess.call(
+                    [
+                        'grep',
+                        '-nir',
+                        st.first_name.lower(),
+                        zoom_reports_dir.resolve()
+                    ]
+                )
+            except IndexError:
+                self.improper_usage()
+        else:
+            self.improper_usage()
+
+    def search_by_parent(self, name):
+        helper = self.check_cache()
+
+        # create dict of guardians & primary_contacts
+        all_guardians = {}
+        primary_contacts = {}
+        for st in helper.students.values():
+            try:
+                primary = st.primary_contact
+                primary_contacts.setdefault(primary.name, primary)
+            except AttributeError:
+                pass
+            for g in st.guardians:
+                all_guardians.setdefault(g.name, g)
+
+        # search for good match (confidence > 85) amongst primary contacts
+        primary_match = process.extractOne(
+            name,
+            [g.name for g in primary_contacts.values()]
+        )
+        if primary_match[1] > 85:
+            return primary_contacts.get(primary_match[0]).student
+
+        # search all parents and guardians if there is no good match in primary
+        # contacts
+        name_match = process.extractOne(
+            name,
+            [g.name for g in all_guardians.values()]
+        )
+        return all_guardians.get(name_match[0]).student
 
     def student_search(self, name, verbose=False):
         'Search for student, print basic student info.'
-        try:
-            st = self.check_cache().find_nearest_match(name)
-            print(st.__str__(verbose))
-            sys.exit()
-        except IndexError:
-            print(f'Student {sys.argv[2]} was not found.')
-            sys.exit()
+        return self.check_cache().find_nearest_match(
+            name,
+            auto_yes=True,
+            threshold=60
+        )
 
     def silly_timer(self):
         try:
@@ -113,9 +180,20 @@ class ShellUtils:
         print("""
         Supported commands:
 
-        student [name] (-v)
-            Pretty prints the dictionary of the matching student. If verbose,
-            also print the dict of the students' guardians.
+        student [name]
+            Prints the student according to Student.__str__(). Provides basic
+            student and guardian information.
+
+        parent [parent/guardian name]
+            Prints the student just like in student search, but search by
+            parent instead of by student. Search algorithm prioritizes primary
+            contacts; so a fuzzy string match with a primary contact at a
+            lower confidence will be returned over a better match against a
+            secondary contact.
+
+        report [student name]
+            Print a report for the student that includes zoom attendance
+            record.
 
         clock
             Automatically clocks in or out of Paychex, depending on time of day
