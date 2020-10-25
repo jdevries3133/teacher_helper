@@ -104,7 +104,7 @@ One of the most difficult things is first instation. The helper class gets
 a new_school_year function from it's parent class, `OnCourseMixin`. This
 method specifically works for me with the reports I can generate from OnCourse.
 
-**`helper.new\_school\_year(cls, student\_data, guardian\_data, strict\_headers=False)`**
+**`helper.new_school_year(cls, student_data, guardian_data, strict_headers=False)`**
 
 Class method inherited from `helper/HelperMixins/oncourse/mixin.py`. The student_data csv should have the following columns:
 
@@ -167,10 +167,10 @@ the headless browser.
 Launch headless chrome and login to paychex. Unless you setup the Imap module
 to get your OTP from your email, you will have to input it. This method does
 not necessarily need to be called, because functions that require you to login
-are protected by the `@login\_first` decorator, which checks for `self.is\_logged\_in`
+are protected by the `@login_first` decorator, which checks for `self.is_logged_in`
 and calls this method if not.
 
-**`self.clock\_in(self)`**
+**`self.clock_in(self)`**
 
 Clock in. The @login_first decorator is applied, so if you haven't done that yet,
 it will happen upon calling this method.
@@ -180,23 +180,23 @@ DOM and checks if you're already clocked in. It may push the button, or may just
 close the borwser if you're already clocked in. Either way,
 **you will be clocked in when all is said and done**
 
-**`self.clock\_out(self)`**
+**`self.clock_out(self)`**
 
 Same as clock in, but clock out.
 
-**`self.get\_clock\_state(self)`**
+**`self.get_clock_state(self)`**
 
 This returns the **LOCALLY CACHED** clock state. Can be used to check whether
 the Browser should be opened.
 
-**`self.set\_clock\_state(self)`**
+**`self.set_clock_state(self)`**
 
 This opens the browser, logs in, and gets the clock state from the website.
 It does not take any arguments, or allow the state to by manually overridden.
 
-**`@ login\_first` decorator**
+**`@ login_first` decorator**
 
-These methods will check whether `self.is\_logged\_in` is true.
+These methods will check whether `self.is_logged_in` is true.
 
 <h1 id="classroom-automator">Classroom Automator</h1>
 
