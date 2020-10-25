@@ -2,6 +2,7 @@ import csv
 from datetime import datetime
 from pathlib import Path
 import logging
+import statistics
 import string
 import re
 
@@ -87,6 +88,8 @@ class Meeting:
                 raise ValueError('Unsupported operand')
         return len(self.attendees) > len(other.attendees)
 
+    def __len__(self):
+        return len(self.attendees)
 
     def open_report(self):
         """
@@ -98,20 +101,23 @@ class Meeting:
         self.grade_level
         self.datetime
         """
-        try:
-            self.grade_level = int(self.path.name[0])
-        except ValueError:
-            raise NotImplementedError(
-                'Grade level is not the first character of the report name.'
-            )
         with open(self.path, 'r') as csvfile:
             rows = [r for r in csv.reader(csvfile)]
+        # raise an exception if row 2 is not blank.
+        # tolerate the case of row[2] = ['', '', '', ...]
+        exception_message = (
+            'Zoom report must contain meeting information. The '
+            f'Report at {self.path} does not appear to contain '
+            'meeting information.'
+        )
         if rows[2]:
-            raise Exception(
-                'Zoom report must contain meeting information. The '
-                f'Report at {self.path} does not appear to contain '
-                'meeting information.'
-            )
+            rw = set(rows[2])
+            if len(rw) <= 1:
+                if rw.pop():
+                    raise Exception(exception_message)
+            else:
+                raise Exception(exception_message)
+        # parse the CSV, having cleared the exception check
         self.duration = int(rows[1][5])
         self.topic = rows[1][1]
         time_str = rows[1][2]
@@ -128,16 +134,20 @@ class Meeting:
         self.datetime = datetime(year, month, day, hour, minute)
         for st in helper.students.values():
             st.zoom_attendance_record = {}
+        grade_levels_within = set()
         for row in rows[4:]:
             duration = row[2]
             st = self.match_student(row[0])
             if not st:
                 continue
+            grade_levels_within.add(st.grade_level)
             st.zoom_attendance_record.setdefault(
                 (self.topic + ';' + self.datetime.isoformat()),
                 duration
             )
             self.attendees.append(st)
+        if len(grade_levels_within) <= 1:
+            self.grade_level = grade_levels_within.pop()
 
     def match_student(self, name):
         """
@@ -224,156 +234,45 @@ class MeetingSet:
 
     # Resultant Data Structure
 
-    By default, meeting groupings will be accessible as a list (self.groups).
+    Meeting groupings will be accessible as a nested list (self.groups).
     Each item in the list will itself be a chronologically sorted list of
-    Meeting instances. However, group_map may be passed to __init__ to produce
-    a more descriptive data structure.
-
-    # group_map: dict NOT CURRENTLY SUPPORTED
+    Meeting instances. 
 
     The presumption is that there is no reliable way to know the full name of
     a meeting. For example, the meeting topic might be, "Health," but whoose
-    homeroom is it? There's no way to know from here. group_map is a mapping
-    of filenames to correct, fully-descriptive meeting names. An example
-    group_map might look like:
+    homeroom is it? There's no way to know from here. Hence, this class simply
+    takes a large pool of meetings and groups them. Labeling can be done
+    elsewhere.
 
-    {
-        '6th Grade Health 9-24-2020 10:13 am.csv': 'Health; Mrs. Smith's Homeroom',
-        '6th Grade Health 9-25-2020 10:13 am.csv': 'Health; Mrs. Jones's Homeroom',
-        'Garbled zoom report filename': 'A Group Label Useful to You'
-    }
+    The topics of each meeting are saved as an attribute on the
+    meeting; "meeting.topic". It is possible for multiple meeting instances
+    with the same topic to be split into different groups if the participants
+    are different enough. This is expected such as in the example case detailed
+    above. However, meetings with different topics will never be grouped
+    together.
 
-    Effectively, this "tags" one instance of a unique group with a particular
-    name. These similar meeting instances are grouped anyway by default – that's
-    basically the purpose of this class, but by tagging a single instance, you
-    can get back a dict where these groups are named. Of course, it's also
-    possible to just take the groupings from self.groups and assign names
-    afterward yourself.
-
-    # trust_topics: bool
-
-    As I mentioned before, the presumption is that there is no reliable way to
-    know the full name of a meeting. Often, teachers' meeting "topics," don't
-    directly correspond to the names of the groups they are meeting with.
-    If the meeting names are trustworthy, however, the group name will be the
-    same as the meeting topic, and the same group_dict attribute as above will
-    exist.
-
+    If, for whatever reason, a teacher has meet with the same class under
+    different zoom meet topics, that case could probably be dealt with in a
+    more flexible subclass which modifies the "match_meeting_with_group_by_union"
+    method.
     """
 
     def __init__(self, dir_path: Path, group_map=None, trust_topics=False):
         self.dir_path = dir_path
-        self.group_map = group_map
-        if group_map:
-            self.group_dict = {}
-        self.trust_topics = trust_topics
         self.groups = []
-        self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.75
+        self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.8
 
     def process(self):
         """
         Called by __init__; produces data structure
         """
-
-
-
-
-        # generate group map from filenames if needed
-
-        # if (not self.group_map and self.trust_topics):
-        #     self.generate_group_map_from_topics()
-
-
-
-
-
-        # init group map; items in group map are pointers to nested lists in
-        # self.groups
-
-        # if self.group_map:
-        #     for k, v in self.group_map.items():
-        #         path = Path(self.dir_path, k)
-        #         self.groups.append(li := [Meeting(path)])
-        #         self.group_dict[v] = li
-
-
-
-
-
         # append all meetings to groupings in self.groups
         for meeting in self.iter_csvs():
             match = self.match_meeting_with_group_by_union(meeting)
             if match:
-                if self.group_map:
-                    if meeting.path.name in self.group_map:
-                        # if the current meeting is the one the user associated
-                        # with a specific name, put this Meeting object into the
-                        # group_dict, which will act as a tag to flush out the
-                        # group dict later
-                        self.group_dict[self.group_map[meeting.path.name]] = [meeting]
-                # append to group of similar meetings
                 match.append(meeting)
             else:
-                # create a new list of meetings if there is no match
                 self.groups.append([meeting])
-
-
-
-
-
-        # At this point, self.group_map, if it exists, only has a single tag
-        # item which creates a link to a larger grouping in self.groups.
-        # fill_group_dict uses that tag to find the matching group in
-        # self.groups and fill out the rest of the group dict
-
-        # if self.group_map:
-        #     self.fill_group_dict()
-
-
-        # TODO: deal with inconsistent attendance case:
-        """
-
-
-        AN IMPORTANT SIDE NOTE
-        I don't know why, but commenting out the group_dict crap did improve
-        the grouping result, so something up here is affecting the grouping
-        algorithm negatively
-
-
-
-
-        Union grouping breaks down when attendance between groups is sporradic.
-        If the attendance rate for any meeting is below ~80%, The diff between
-        the attendees of that partially-attended meeting and the full group
-        will kick that meeting into a separate group.
-
-        One way to deal with this may be to consider mutual exclusion.
-        For the average teacher, attendees only come to one type of meeting.
-        If we know that meeting attendees are mutually exclusive for any given
-        meeting type, we can be much more presumptuous in creating groupings.
-
-        Idea:
-        If the meeting misses the union threshold by ~20%, and len(attendees)
-        of the meeting is less than the max() (i.e.: this was a pooorly attended
-        meeting), add it to the group anyway if the students in the current
-        meeting are almost a perfect subset of the greater group.
-        """
-
-
-    def fill_group_dict(self):
-        """
-        Wherever a match was found for the user-provided label, that single
-        meeting object was put into the group_dict. Now, we can use that meeting
-        to find the group within self.groups and fill the meeitng with the whole
-        group.
-        """
-        for grouping in self.groups:
-            for meeting in grouping:
-                label = self.group_map.get(meeting.path.name)
-                if label:
-                    self.group_dict[label] = grouping
-                    break
-
 
     def match_meeting_with_group_by_union(self, meeting: Meeting):
         """
@@ -385,45 +284,27 @@ class MeetingSet:
         of the same group of students meeting.
         """
         for group in self.groups:
-            # using the biggest meeting (in terms of num of attendees)
-            # so far for consistency
-            past_meeting = max(group)
-            pm__attendees = {s.name for s in past_meeting.attendees}
-            cm__attendees = {s.name for s in meeting.attendees}
-            union = len(pm__attendees | cm__attendees)
-            total = len(pm__attendees) + len(cm__attendees)
-            # Where groups are the same and attendance is perfect,
-            # len(total) / 2 == len(union)
-            # Considering imperfect attendance, the group will be considered
-            # match if the union is less than 85% of the total.
-            # This CONSTANT is definied in __init__
-            if total * self.TOTAL_TO_UNION_RATIO_ADJUSTMENT > union:
-                print(f'{meeting.__str__()} matches with {past_meeting.__str__()}')
+            # select closest_meeting: the past meeting whose len() is closest
+            # to the current meeting.
+            closest_meeting = None
+            smallest_difference = 100  # initialize with random large number
+            for prev_meeting in group:
+                diff = abs(len(prev_meeting) - len(meeting))
+                if diff < smallest_difference:
+                    smallest_difference = diff
+                    closest_meeting = prev_meeting
+
+            # perform set union comparison
+            cm__attendees = {s.name for s in closest_meeting.attendees}
+            m__attendees = {s.name for s in meeting.attendees}
+            union = len(cm__attendees | m__attendees)
+            total = len(cm__attendees) + len(m__attendees)
+            # MATCH CRITERIA
+            matched = total > union and prev_meeting.topic == meeting.topic
+            if matched:
+                logging.debug(matched)
                 return group
         return []
-
-    def generate_group_map_from_topics(self):
-        """
-        If trust_topics is true and group_map is None, this function
-        generates a group map from the topics. This function will raise an
-        exception if it should not have been called.
-        """
-        # validation
-        try:
-            assert not self.group_map
-            assert self.trust_topics
-        except AssertionError:
-            raise Exception(
-                'Preconditions for generate_group_map_from_topic were not '
-                f'met.\ngroup_map:\t{self.group_map}\n\ntrust_topics:\t'
-                + self.trust_topics
-            )
-        self.group_map = {}
-        for path in self.dir_path.iterdir():
-            meeting = Meeting(path)
-            self.group_map.setdefault(path.name, meeting.topic)
-        self.group_dict = {}
-        return self.group_map
 
     def rename_csv_files(self):
         """
@@ -582,8 +463,10 @@ class ExcelWriter:
         breakpoint()
         if self.meetings.group_dict:
             for meeting_set_name, meetings in self.meetings.group_dict.items():
-                self.write_group_dict_item(meeting_name, meetings)
+                self.write_group_dict_item(
+                    meeting_set_name, meetings, master_sheet, 'A6')
 
+    @staticmethod
     def write_group_dict_item(
         meeting_name: str,
         meeting: MeetingSet,

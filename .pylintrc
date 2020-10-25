@@ -152,8 +152,9 @@ disable=print-statement,
         logging-not-lazy,
         redifined-outer-name,
         invalid-name,
-        too-few-public-methods 
-               
+        too-few-public-methods,
+        redefined-outer-name
+
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

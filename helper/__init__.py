@@ -1,4 +1,5 @@
 import os
+import logging
 from pathlib import Path
 
 from .helper import Helper
@@ -17,3 +18,5 @@ for var in REQUIRED_VARS:
             f'Environment variable {var} is missing, which is necessary for '
             'certain functions within this module.'
         )
+
+logging.basicConfig(filename="helper.log", encoding="utf-8", level=logging.DEBUG)
