@@ -1,47 +1,112 @@
-# Helper.do_stuff
+# Overview
+
+This is a library of stuff that I have, mostly unsuccessfully, used to automate
+my work as a teacher. For the most part, it's been the primary means for me
+learning object oriented programming, and has had a history of massive revision
+as I continue to learn and fix my mistakes. There are currently three major
+useful parts of this project:
+
+1. <a href="#helper">helper.Helper</a>
+2. <a href="#paychex">helper.paychex.Paychex</a>
+3. <a href="#classroom-automator">helper.ClassroomAutomator</a>
+
+First, the Helper class encapsulates information that I deal with as a teacher.
+The most important attribute is helper.students which is a dictionary; students'
+full names are the keys, and Student class instances from `helper/student.py`
+corresponding to that student are the values. Honestly, the Helper class is
+really just your school's Student Information System, but in python. Look at
+the classes helper.student.Student, helper.parent_guardian.ParentGuardian,
+and helper.homeroom.Homeroom, and helper.group.Group. All of these classes
+are nestled within the helper class so that you can compose loops and
+make selections within python to find information on students. For example,
+
+```
+>>> helper.students.get('Johnny Smith').homeroom.teacher
+Jones
+>>> all_fourth = [s for s in helper.students.values() if s.grade_level == 4]
+>>> all_fourth
+[<helper.student.Student object at 0x1032862b0>, ...]
+>>> {s.homeroom for s in all_fourth}
+{"Jones", "Smith", "Henderson", ...}
+```
+
+<h1 id="helper">Helper</h1>
+
+> The Helper class encapsulates information that must be made pythonic to get
+> anything else done. Information on all of your students, homeroom lists,
+> parent contact information, etc. are available within this class. The
+> helper.find_nearest_match() is extremely useful for bringing in data
+> from elsewhere, like spreadsheets of attendance records, CSV file output from
+> flipgrid, edpuzzle, or other educational platforms, and allowing you to
+> collate, comprehend, and reduce data through python.
 
 ## Top-Level `shell.py`
 
-The idea is to alias this file to something easy to remember on your machine.
-It exposes some of the module's functionality as a command line utility. Note
-that you will need to update the shebang on the first line to point to the
-correct interpreter on your machine.
+On my machine, I call this utility through
+[this wrapper script,](https://github.com/jdevries3133/my_shell_scripts/blob/master/emp)
+although there are many ways to set it up for yourself. Putting that script
+in your `PATH` is nice, though, because you only need to change one constant,
+and then things should "just work."
 
-### Setup Tutorial (OS X or Linux)
+Importantly, you first need to create a virtual environment for the project.
+First, figure out the command for python <= version 3.8 on your machine;
 
-1. Allow `shell.py` to be executed directly.
+- `python3 --version` or `python3.8 --version`; whatever returns python3.8
+  or higher
 
-   `chmod +x shell.py`
+Then, create the virtual environment and install dependencies
 
-2. Add a convenient alias to `shell.py` in your ~/.bashrc file.
+- `[python3|python3.8] -m venv venv`
+- `source venv/bin/activate`
+- `pip install -r requirements.txt`
 
-   `echo "export [your alias name]="path/to/`shell.py`" >> ~/.bashrc`
+Finally, instantiate the helper object and create a cache by calling
+`helper.write_cache()`.
+<a href="#helper">See here for details.</a>
 
-3. Instantiate the Helper class and call the `write_cache()` method. This cache will be used for shell utilities. See <a href="#helper">helper section</a> for details on instantiaiton.
+### Usage
 
-### Utilities
+Once installed, shell.py provides the following utilities:
 
-`python shell.py student [name] (-v)`
+    Supported commands:
 
-Pretty prints the dictionary of the matching student. If verbose, also
-print the dict of the students' guardians.
+    student [name]
+        Prints the student according to Student.__str__(). Provides basic
+        student and guardian information.
 
-`python shell.py clock`
-Automatically clocks in or out of Paychex, depending on time of day
-and previous clock state.
+    parent [parent/guardian name]
+        Prints the student just like in student search, but search by
+        parent instead of by student. Search algorithm prioritizes primary
+        contacts; so a fuzzy string match with a primary contact at a
+        lower confidence will be returned over a better match against a
+        secondary contact.
 
-`python shell.py` (no arguments)
-Run this script with no arguments, and it will enter the shell mode.
-Here, the helper object is instantiated in the local namespace with
-the variable name "helper". All attributes and methods are accessible.
+    report [student name]
+        Print a report for the student that includes zoom attendance
+        record.
 
-   <h1 id="helper">from helper import Helper</h1>
+    clock
+        Automatically clocks in or out of Paychex, depending on time of day
+        and previous clock state.
 
-A class that encapsulates homerooms, students, extracurricular groups, and parent contacts.
+    timer [minutes] [message]
+        Start a timer that will say [message] after [minutes]. The message
+        will be spoken by a robot voice.
 
-**`helper.new_school_year(cls, student_data, guardian_data, strict_headers=False)`**
+    [no arguments]
+        Run this script with no arguments, and it will enter the shell mode.
+        Here, the helper object is instantiated in the local namespace with
+        the variable name "helper". All attributes and methods are accessible.
 
-Class method inherited from `helper/HelperMixins/oncourse_mixin.py`. The student_data csv should have the following columns:
+<h2 id="helper-instantiation">Initial Instantiation</h2>
+
+One of the most difficult things is first instation. The helper class gets
+a new_school_year function from it's parent class, `OnCourseMixin`. This
+method specifically works for me with the reports I can generate from OnCourse.
+
+**`helper.new\_school\_year(cls, student\_data, guardian\_data, strict\_headers=False)`**
+
+Class method inherited from `helper/HelperMixins/oncourse/mixin.py`. The student_data csv should have the following columns:
 
 - first name
 - last name
@@ -66,16 +131,19 @@ The guardian_data csv should have the following columns:
 
 These reports can be easily exported from OnCourse, and by passing them into this function, the helper class will be instantiated.
 
+If `strict_headers` is set to true, it will look for an exact match in the
+header column. By default, it just uses an "if in" match. It's pretty wonky;
+probably just leave that alone.
+
 ## Helper Class Methods
 
-### find_nearest_match(self, student_names)
+### find_nearest_match(self, student_name, auto_yes=False)
 
 Takes a student name and returns a Student instances. Asks for the user input
-to confirm the nearest match if no exact match is found.
+to confirm the nearest match if no exact match is found. Set auto_yes to false,
+and it will not ask for user input, it will simply go with the best match.
 
-<br />
-
-# Paychex
+<h1 id="paychex">Paychex</h1>
 
 ## from helper.paychex import Paychex
 
@@ -99,10 +167,10 @@ the headless browser.
 Launch headless chrome and login to paychex. Unless you setup the Imap module
 to get your OTP from your email, you will have to input it. This method does
 not necessarily need to be called, because functions that require you to login
-are protected by the `@login_first` decorator, which checks for `self.is_logged_in`
+are protected by the `@login\_first` decorator, which checks for `self.is\_logged\_in`
 and calls this method if not.
 
-**`self.clock_in(self)`**
+**`self.clock\_in(self)`**
 
 Clock in. The @login_first decorator is applied, so if you haven't done that yet,
 it will happen upon calling this method.
@@ -112,20 +180,34 @@ DOM and checks if you're already clocked in. It may push the button, or may just
 close the borwser if you're already clocked in. Either way,
 **you will be clocked in when all is said and done**
 
-**`self.clock_out(self)`**
+**`self.clock\_out(self)`**
 
 Same as clock in, but clock out.
 
-**`self.get_clock_state(self)`**
+**`self.get\_clock\_state(self)`**
 
 This returns the **LOCALLY CACHED** clock state. Can be used to check whether
 the Browser should be opened.
 
-**`self.set_clock_state(self)`**
+**`self.set\_clock\_state(self)`**
 
 This opens the browser, logs in, and gets the clock state from the website.
 It does not take any arguments, or allow the state to by manually overridden.
 
-**`@ login_first` decorator**
+**`@ login\_first` decorator**
 
-These methods will check whether `self.is_logged_in` is true.
+These methods will check whether `self.is\_logged\_in` is true.
+
+<h1 id="classroom-automator">Classroom Automator</h1>
+
+**The code is the documentation, good luck 😉**
+
+This module follows a much cleaner Object Oriented design. The `ClassroomAutomator`
+is the lowest base class with a lot of the selenium code that actually navigates
+google classroom. The `FeedbackAutomatorBase` inherits that functionality from the
+`ClassroomAutomator` class, and focuses on giving feedback for google doc and
+slide based assignments in google classrooms, which is quite tedious. However,
+this is an abstract class. It must be subclassed whenever a user wants to
+give feedback on a specific assignment by implementing the `assess`, and
+`comment_bank` methods. A sample implementation can be found at the bottom of
+the file in the `FeedbackAutomator` class, which is well documented.

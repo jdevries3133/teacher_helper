@@ -1,4 +1,11 @@
-#!/Users/JohnDeVries/repos/teacher_helper/venv/bin/python3.8
+"""
+Access the teacher_helper module functionality through a command line
+interface. Invoke directly from within an activated virtual environment,
+or use a wrapper script like this one:
+
+    https://github.com/jdevries3133/my_shell_scripts/blob/master/emp
+"""
+
 import code
 import os
 from time import sleep
@@ -20,14 +27,20 @@ class ShellUtils:
 
     def route(self):
         'Route self.args to various utilities'
-        if '-h' in self.args or 'help' in self.args:
+
+        # check for verbose of help
+        if '-h' in self.args or '--help' in self.args:
             self.print_help()
             sys.exit()
         verbose = '-v' in self.args
+
+        # launch python shell if there are no arguments
         if len(self.args) < 2:
             helper = self.check_cache()
             code.interact(local={'helper': helper})
             sys.exit()
+
+        # route argument to utility functions
         if self.args[1] == 'student':
             try:
                 st = self.student_search(
