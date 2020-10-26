@@ -1,19 +1,3 @@
-# Zoom Module TODO
-
-- Draw Insights
-  - What homerooms attend most?
-  - / least
-  - What students have perfect attendance?
-
-Put it all into a database, make SQL queries on it.
-Service that takes logs and turns it into queriable data. - Put information into a database
-
-## UML Diagram
-
-- UML Diagrams are for code-level planning
-- It's also possible to make higher-level diagrams in the same style for higher-
-  level planning.
-
 # Overview
 
 This is a library of stuff that I have, mostly unsuccessfully, used to automate
@@ -22,9 +6,9 @@ learning object oriented programming, and has had a history of massive revision
 as I continue to learn and fix my mistakes. There are currently three major
 useful parts of this project:
 
-1. <a href="#helper">helper.Helper</a>
-2. <a href="#paychex">helper.paychex.Paychex</a>
-3. <a href="#classroom-automator">helper.ClassroomAutomator</a>
+1. <a href="#helper">teacherHelper</a>
+2. <a href="#paychex">paychex</a>
+3. <a href="#classroom-automator">pyautogc</a>
 
 First, the Helper class encapsulates information that I deal with as a teacher.
 The most important attribute is helper.students which is a dictionary; students'
@@ -122,7 +106,8 @@ method specifically works for me with the reports I can generate from OnCourse.
 
 **`helper.new_school_year(cls, student_data, guardian_data, strict_headers=False)`**
 
-Class method inherited from `helper/HelperMixins/oncourse/mixin.py`. The student_data csv should have the following columns:
+Class method inherited from `helper/HelperMixins/oncourse/mixin.py`. The
+student_data csv should have the following columns:
 
 - first name
 - last name
@@ -145,7 +130,8 @@ The guardian_data csv should have the following columns:
 - student resides with
 - relationship to student
 
-These reports can be easily exported from OnCourse, and by passing them into this function, the helper class will be instantiated.
+These reports can be easily exported from OnCourse, and by passing them into
+this function, the helper class will be instantiated.
 
 If `strict_headers` is set to true, it will look for an exact match in the
 header column. By default, it just uses an "if in" match. It's pretty wonky;
@@ -160,8 +146,6 @@ to confirm the nearest match if no exact match is found. Set auto_yes to false,
 and it will not ask for user input, it will simply go with the best match.
 
 <h1 id="paychex">Paychex</h1>
-
-## from helper.paychex import Paychex
 
 ### Overview
 
@@ -215,16 +199,17 @@ It does not take any arguments, or allow the state to by manually overridden.
 
 These methods will check whether `self.is_logged_in` is true.
 
-<h1 id="classroom-automator">Classroom Automator</h1>
+<h1 id="classroom-automator">pyautogc</h1>
 
 **The code is the documentation, good luck 😉**
 
-This module follows a much cleaner Object Oriented design. The `ClassroomAutomator`
-is the lowest base class with a lot of the selenium code that actually navigates
-google classroom. The `FeedbackAutomatorBase` inherits that functionality from the
-`ClassroomAutomator` class, and focuses on giving feedback for google doc and
-slide based assignments in google classrooms, which is quite tedious. However,
-this is an abstract class. It must be subclassed whenever a user wants to
-give feedback on a specific assignment by implementing the `assess`, and
-`comment_bank` methods. A sample implementation can be found at the bottom of
-the file in the `FeedbackAutomator` class, which is well documented.
+This module follows a much cleaner Object Oriented design. The
+`ClassroomAutomator` is the lowest base class with a lot of the selenium code
+that actually navigates google classroom. The `FeedbackAutomatorBase` inherits
+that functionality from the `ClassroomAutomator` class, and focuses on giving
+feedback for google doc and slide based assignments in google classrooms,
+which is quite tedious. However, this is an abstract class. It must be
+subclassed whenever a user wants to give feedback on a specific assignment by
+implementing the `assess`, and `comment_bank` methods. A sample implementation
+can be found at the bottom of the file in the `FeedbackAutomator` class, which
+is well documented.

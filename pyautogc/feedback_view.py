@@ -15,14 +15,6 @@ following abstract methods:
 
 Optionally, you may also overwrite the "grade" and "give_feedback" methods. See
 documentation for those specific methods for details.
-
-The lifecycle of these subclassable methods are:
-    - self._get_context()   => self.context gains "name", "attachments", and "grade_divisor"
-    - self.assess()         => self.context gains "grade"
-    - self.grade()          => self.context gains "percentage_grade"; grade is entered into Google Classroom
-    - self.give_feedback()  => self.context gains "feedback". Feedback is entered into the DOM
-    - self._cleanup()       =>
-
 """
 
 
@@ -51,7 +43,14 @@ class FeedbackViewUtils(ClassroomAutomator):
     All methods prefixed with _gc_ support _get_context
     """
 
-    def __init__(self, username: str, password: str, assignment_name: str, classroom_names: list, **kwargs):
+    def __init__(
+            self,
+            username: str,
+            password: str,
+            assignment_name: str,
+            classroom_names: list,
+            **kwargs
+    ):
         super().__init__(username, password)
         self.assignment_name = assignment_name
         self.classroom_names = classroom_names
@@ -195,9 +194,6 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
     """
     Iteratively assess all assignments of a given name (str) in given classrooms
     (list).
-
-
-    method.
     """
 
     def __iter__(self):

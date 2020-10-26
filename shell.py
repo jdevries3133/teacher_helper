@@ -17,7 +17,7 @@ from pathlib import Path
 from fuzzywuzzy import process
 
 from helper import Helper
-from helper.paychex import Paychex
+from paychex import Paychex
 
 
 class ShellUtils:
