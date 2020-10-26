@@ -5,15 +5,12 @@ from datetime import datetime
 
 from fuzzywuzzy import process
 
-from .HelperMixins import EndOfSchoolYearMixin, OnCourseMixin, SillyMixin
+from .HelperMixins import OnCourseMixin, SillyMixin
 
 MODULE_DIR = os.path.dirname(__file__)
 
 
-class Helper(
-        EndOfSchoolYearMixin,
-        OnCourseMixin,
-        SillyMixin,):
+class Helper(OnCourseMixin, SillyMixin):
     """
     Driver for the entire module! See README.md test
     """

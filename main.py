@@ -2,9 +2,9 @@ import shelve
 from pprint import pprint
 import os
 from pathlib import Path
-from helper.ClassroomAutomator import FeedbackAutomator
-from helper import Helper
-from helper.zoom_attendance_report import MeetingSet, ExcelWriter
+from pyautogc import FeedbackAutomator
+from teacherHelper import Helper
+from teacherHelper.zoom_attendance_report import MeetingSet, ExcelWriter
 
 
 def main():

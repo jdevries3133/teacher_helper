@@ -19,4 +19,8 @@ for var in REQUIRED_VARS:
             'certain functions within this module.'
         )
 
-logging.basicConfig(filename="helper.log", encoding="utf-8", level=logging.DEBUG)
+logging.basicConfig(
+    format="FILE %(filename)s:FUNC %(funcName)s:LINE %(lineno)s:%(levelname)s:%(message)s",
+    filename="helper.log",
+    level=logging.DEBUG
+)

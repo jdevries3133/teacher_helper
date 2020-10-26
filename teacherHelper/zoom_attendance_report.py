@@ -1,5 +1,6 @@
 import csv
 from datetime import datetime
+import dbm
 from pathlib import Path
 import logging
 import statistics
@@ -10,7 +11,7 @@ from fuzzywuzzy import process
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
 
-from .csv_parser import BaseCsvParser
+from .tools.csv_parser import BaseCsvParser
 try:
     from .manual_zoom_matches import MANUAL_FIXES
 except ImportError:
@@ -18,16 +19,17 @@ except ImportError:
         """
         For students with silly names the algorithm cannot recognize, write
         this function in the file above to make individual corrections.
-        ./manual_zoom_matches is in the .gitignore because it will contain
-        student names.
+        ./manual_zoom_matches.py is in the .gitignore because it will
+        contain student names.
         """
         return name
 from .helper import Helper
 
-helper = Helper.read_cache()
+class HelperConsumer:
+    def __init__(self):
+        self.helper = Helper.read_cache()
 
-
-class Meeting:
+class Meeting(HelperConsumer):
     """
     Single zoom meeting. Opens and reads a CSV file, as downloaded from
     zoom.
@@ -40,6 +42,7 @@ class Meeting:
     """
 
     def __init__(self, path: Path):
+        super().__init__()
         self.path = path
         self.attendees = []
         self.datetime = None
@@ -50,7 +53,7 @@ class Meeting:
 
     def __repr__(self):
         outstr = (
-            f'<helper.zoom_attendance_report.Meeting; {self.topic} at '
+            f'<self.helper.zoom_attendance_report.Meeting; {self.topic} at '
             f'{self.datetime.isoformat()}>'
         )
         return outstr
@@ -132,7 +135,7 @@ class Meeting:
         if 'pm' in time_str.lower():
             hour += 12
         self.datetime = datetime(year, month, day, hour, minute)
-        for st in helper.students.values():
+        for st in self.helper.students.values():
             st.zoom_attendance_record = {}
         grade_levels_within = set()
         for row in rows[4:]:
@@ -151,7 +154,7 @@ class Meeting:
 
     def match_student(self, name):
         """
-        Wrapper method that ties together the helper class's find_student
+        Wrapper method that ties together the self.helper class's find_student
         method, the try_matching_student... method in this class, and some
         custom matches for students with really weird zoom names. Here is also
         where the student's raw zoom name is sanitized (punctuation removed).
@@ -168,7 +171,7 @@ class Meeting:
         # popular emoticon character
         name.replace('ω', '')
         try:
-            return helper.find_nearest_match(name, auto_yes=True)
+            return self.helper.find_nearest_match(name, auto_yes=True)
         except Warning:
             pass
         st = self.try_matching_student_within_grade(name)
@@ -181,8 +184,8 @@ class Meeting:
 
     def try_matching_student_within_grade(self, student_name):
         """
-        Unlike in the helper student matching function, this class is aware of
-        the grade level of the student it is trying to match. If the helper
+        Unlike in the self.helper student matching function, this class is aware of
+        the grade level of the student it is trying to match. If the self.helper
         method returns None, this fallback method tries to identify the
         student through process of elimination within their own grade. This
         helps match more students who only provide their first name.
@@ -190,7 +193,7 @@ class Meeting:
         first_name_match = process.extract(
             student_name,
             [
-                s.first_name for s in helper.students.values()
+                s.first_name for s in self.helper.students.values()
                 if s.grade_level == self.grade_level
             ],
             limit=3
@@ -211,13 +214,13 @@ class Meeting:
 
             # If the first two matches are not the same, that means the first
             # name is unique, and we can make a match within the grade level.
-            for n, s in helper.students.items():
+            for n, s in self.helper.students.items():
                 if n.split(' ')[0] == first_name_match[0][0]:
                     logging.debug(
                         'Successful grade level match for '
-                        + helper.students[n].name
+                        + self.helper.students[n].name
                     )
-                    return helper.students[n]
+                    return self.helper.students[n]
 
 
 class MeetingSet:
@@ -258,6 +261,7 @@ class MeetingSet:
     """
 
     def __init__(self, dir_path: Path, group_map=None, trust_topics=False):
+        super().__init__()
         self.dir_path = dir_path
         self.groups = []
         self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.8

@@ -1,3 +1,19 @@
+# Zoom Module TODO
+
+- Draw Insights
+  - What homerooms attend most?
+  - / least
+  - What students have perfect attendance?
+
+Put it all into a database, make SQL queries on it.
+Service that takes logs and turns it into queriable data. - Put information into a database
+
+## UML Diagram
+
+- UML Diagrams are for code-level planning
+- It's also possible to make higher-level diagrams in the same style for higher-
+  level planning.
+
 # Overview
 
 This is a library of stuff that I have, mostly unsuccessfully, used to automate
@@ -187,7 +203,8 @@ Same as clock in, but clock out.
 **`self.get_clock_state(self)`**
 
 This returns the **LOCALLY CACHED** clock state. Can be used to check whether
-the Browser should be opened.
+the Browser should be opened, or to query the user for whether they want to
+clock in or out when it's ambiguous.
 
 **`self.set_clock_state(self)`**
 
