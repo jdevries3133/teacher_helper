@@ -19,6 +19,8 @@ from .exceptions import (
 
 class ClassroomAutomator:
     def __init__(self, username: str, password: str):
+        assert isinstance(username, str)
+        assert isinstance(password, str)
         self.username = username
         self.password = password
         self.driver = webdriver.Firefox()

@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import TimeoutException
 
-from tools.imap import Imap, PaychexOTPNotFound
+from .imap import Imap, PaychexOTPNotFound
 
 
 CLOCK_STATE_FILE = os.path.join(
