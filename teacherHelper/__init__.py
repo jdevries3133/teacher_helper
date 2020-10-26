@@ -21,6 +21,6 @@ for var in REQUIRED_VARS:
 
 logging.basicConfig(
     format="FILE %(filename)s:FUNC %(funcName)s:LINE %(lineno)s:%(levelname)s:%(message)s",
-    filename="helper.log",
+    filename=Path(Path(__file__).parent, "helper.log").resolve(),
     level=logging.DEBUG
 )
