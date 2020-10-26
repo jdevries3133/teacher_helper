@@ -1,6 +1,6 @@
 import csv
 
-from ..csv_parser import IterCsv
+from ..tools.csv_parser import IterCsv
 from ..student import Student
 from ..homeroom import Homeroom
 from ..parent_guardian import ParentGuardian

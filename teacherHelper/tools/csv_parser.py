@@ -43,7 +43,6 @@ class IterCsv:
                             'between these columns to continue.'
                         )
 
-
     def __iter__(self):
         return self
 
@@ -52,4 +51,3 @@ class IterCsv:
         if self.current_row < len(self.rows) - 1:
             return self.context, self.rows[self.current_row]
         raise StopIteration
-

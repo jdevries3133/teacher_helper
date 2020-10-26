@@ -90,11 +90,14 @@ class ClassroomAutomator:
             self.driver.get(url)
         elif view == 'assignment_feedback':
             url = self._get_assignment_url(kwargs['assignment_name'])
+            # TODO split into separate function
             parts = url.split('/')
             sep = parts.index('c')
             base = '/'.join(parts[:sep]) + '/'
             av_url = base + f'g/tg/{parts[sep+1]}/{parts[sep+3]}'
             self.driver.get(av_url)
+        else:
+            raise Exception(f'Invalid view: {view}')
 
     def download_document_as(self, download_type):
         """
@@ -120,7 +123,7 @@ class ClassroomAutomator:
         )
         inp.send_keys(download_queries[download_type] + u'\ue007')
         inp.clear()
-        raise Exception('jack: Not yet implemented.')
+        raise NotImplementedError('jack: Not yet implemented.')
 
     def _get_assignment_url(self, assignment_name, raise_exception=False):
         """

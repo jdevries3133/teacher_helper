@@ -1,7 +1,5 @@
-from .meta_groups import MetaGroup
 
-
-class Homeroom(MetaGroup):
+class Homeroom:
     def __init__(self, teacher, grade_level, students):
         """
         Ensure that string constants for csv headers of id, student names, and
