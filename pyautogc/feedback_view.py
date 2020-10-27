@@ -19,12 +19,17 @@ documentation for those specific methods for details.
 
 
 from abc import ABC, abstractmethod
+from time import sleep
 from types import SimpleNamespace
 
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import (
+    NoSuchElementException, 
+    NoAlertPresentException
+)
 
 from .automator import ClassroomAutomator
 from .exceptions import ClassroomNameException
@@ -69,13 +74,70 @@ class FeedbackViewUtils(ClassroomAutomator):
         # initialize attributes assigned or mutated by class methods
         self.context = {}
 
-    def _input_feedback(self):
-        'Actually put the feedback into google classroom'
+    def _input_feedback(self, feedback: str):
+        """
+        Actually put the feedback into google classroom
+        """
+        input_xpath = (
+            '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/'
+            'div/div[2]/div/div[2]/div[2]/div[1]/div[1]/div[1]/input'
+        )
+        input_el = WebDriverWait(self.drive, 20).until(
+            EC.element_to_be_clickable(
+                (
+                    By.XPATH,
+                    input_xpath
+                )
+            )
+        )
+        input_el.send_keys(feedback)
+        post_button_xpath = (
+            '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/'
+            'div/div[3]/div/div[1]/c-wiz/div/div[2]/div[2]/div[2]'
+        )
+        self.driver.find_element_by_xpath(post_button_xpath).click()
+
+    def _input_grade(self, grade: int):
+        """
+        Actually put the grade into google classroom. CAREFUL, this function
+        performs no validation against the DOM.
+        """
+        WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(
+                (
+                    By.XPATH,
+                    # grade input element
+                    '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/'
+                    'div[1]/div/div[2]/div/div[2]/div[2]/div[1]/div[1]/div[1]/input'
+                )
+            )
+        ).send_keys(str(grade))
         breakpoint()
 
-    def _input_grade(self):
-        'Actually put the grade into google classroom'
-        breakpoint()
+    def view_slide(self, slide: int):
+        """
+        Click on a certain slide number
+        """
+        if slide > 15:
+            print(
+                'not implemented: this might not work for long slideshows. '
+                'It may be necessary to wait or scroll to render later slides.'
+            )
+        WebDriverWait(self.driver, 20).until(
+            EC.frame_to_be_available_and_switch_to_it('material-iframe')
+        )
+        slide_tiles_drawer = WebDriverWait(self.driver, 20).until(
+            EC.presence_of_element_located(
+                (
+                    By.XPATH,
+                    '/html/body/div[4]/div/table/tbody/tr/td[1]/div[2]/div'
+                )
+            )
+        )
+        for _ in range(slide - 1):
+            slide_tiles_drawer.send_keys(Keys.DOWN)
+            sleep(0.2)
+        self.driver.switch_to_default_content()
 
     # TODO: move all the xpaths out into a constants folder or file
     def _av_get_all_students(self):
@@ -132,7 +194,40 @@ class FeedbackViewUtils(ClassroomAutomator):
             (By.XPATH, first_student)
         )).click()
 
-    def _gc_parse_attachments(self):
+    def _av_get_grade_divisior(self):
+        divisor = WebDriverWait(self.driver, 20).until(
+            EC.visibility_of_element_located(
+                (
+                    By.XPATH,
+                    '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/'
+                    'div[1]/div/div[2]/div/div[2]/div[2]/div[1]/div[1]/span/span'
+                    '/span'
+                )
+            )
+        )
+        self.context['grade_divisor'] = int(divisor.text[1:])
+
+    def _av_get_current_name(self):
+        """
+        Return the current active name in the assignment view. This is tricky
+        because the assignment dropdown menu has a placeholder for every
+        student, but the hidden placeholder text is a blank string unless
+        the student is active. Therefore, this selects all these name divs
+        and iterates through them, returning when it finds the one that isn't
+        an empty string.
+        """
+        names_xpath = (
+            '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[1]/div/div[1]'
+            '/div[1]/div[*]/span/div/div[1]'
+        )
+        names = self.driver.find_elements_by_xpath(names_xpath)
+        for n in names:
+            if n.text:
+                self.context['name'] = n.text
+                return n.text
+        raise Exception("Function should have returned; something has changed.")
+
+    def _av_parse_attachments(self):
         self.context['attachments'] = []
         common_parent = (
             '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/div'
@@ -159,7 +254,7 @@ class FeedbackViewUtils(ClassroomAutomator):
             self.context['attachments'].append({
                 'name': label_el.text,
                 'label_xpath': single_assignment_label,
-                'href': 'not yet implemented in _gc_parse_attachments()'
+                'href': 'not yet implemented in _av_parse_attachments()'
             })
         except NoSuchElementException:
             label_els = self.driver.find_elements_by_xpath(
@@ -174,7 +269,7 @@ class FeedbackViewUtils(ClassroomAutomator):
                 self.context['attachments'].append({
                     'name': el.text,
                     'label_xpath': xpath,
-                    'href': 'not yet implemented in _gc_parse_attachments()'
+                    'href': 'not yet implemented in _av_parse_attachments()'
                 })
 
     @ staticmethod
@@ -207,12 +302,17 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
         return self
 
     def __next__(self):
+        self.assess()
+        self.give_feedback()
+        self.grade()
+
         self.current_student += 1
         if self.current_student >= len(self.context.get('assignment_statuses')) - 1:
-            self._next_classroom()
+            self.current_classroom += 1
             if self.current_classroom >= len(self.classroom_names) - 1:
-                breakpoint()
                 raise StopIteration
+            else:
+                self._next_classroom()
         self._next_student()
         return self.driver, SimpleNamespace(**self.context)
 
@@ -224,6 +324,9 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
 
         Must add {"feedback": str} into self.context. If self.context.get('feedback')
         returns None, no feedback will be sent.
+
+        If you take the grade from user input, use self.is_grade_valid() to
+        validate it after you put it in context.
         """
 
     @ abstractmethod
@@ -265,7 +368,7 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
             - Save all custom feedback to a condensed report
         ... those would be good reasons to overwrite this.
         """
-        self._input_feedback()  # in FeedbackViewUtils
+        self._input_feedback(self.context.get('feedback'))  # in FeedbackViewUtils
 
     def grade(self):
         """
@@ -278,25 +381,64 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
         ... those would be a good reasons to subclass this.
         """
         self.assess()
+        self._validate_grade()
+        self._input_grade(self.context['grade'])
+
+    def is_grade_valid(self):
+        """
+        Documented for user. Returns boolean rather than raising
+        exception.
+        """
+        try:
+            self._validate_grade()
+            return True
+        except AssertionError:
+            return False
+
+    def _validate_grade(self):
+        """
+        Ensure that the grade is:
+            - An integer
+            - Less than or equal to the denominator
+
+            -- also --
+            - Assign self.context['percentage_grade']
+        """
         assert isinstance(self.context.get('grade'), int)
-        assert self.context.get('grade') <= self.context.get('grade_divisor')
+        assert self.context['grade'] <= self.context['grade_divisor']
         self.context['percentage_grade'] = (
-            self.context.get('grade') / self.context.get('grade_divisor')
+            self.context['grade'] / self.context['grade_divisor']
         )
-        self._input_grade()  # in FeedbackViewUtils
 
     def _next_student(self):
+        """
+        Does not increment counter. Only performs actions necessary to click
+        on to the next student, including 
+        """
         if self.current_student == -1:
             self._get_context()
             return
+        else:
+            # this func is called by _get_context(), but it is the only func
+            # within _get_context that must be called after each STUDENT, not
+            # each classroom; thus, the if / else
+            self._av_get_current_name()
         assert self.current_student < len(self.context['assignment_statuses'])
         self.driver.find_element_by_xpath(
             '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[2]/div[2]'
         ).click()
-        self._get_context()
+        # if program moves too fast, there will be an alert
+        try:
+            # try to dismiss the alert and try again
+            self.driver.switch_to.alert.accept()
+            return self._next_student()
+        except NoAlertPresentException:
+            # if there is no alert, move on
+            pass
+        # TODO: check if elimination of call to self._get_context() at this
+        # line broke anything
 
     def _next_classroom(self):
-        self.current_classroom += 1
         self.current_student = -1
         self.navigate_to(
             'classwork',
@@ -316,12 +458,14 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
         """
         self._av_sort_by_status()
         self._av_get_all_students()
+        self._av_get_current_name()
 
     def _get_context(self):
         """
         Called for each student.
         """
-        self._gc_parse_attachments()
+        self._av_parse_attachments()
+        self._av_get_grade_divisior()
         # raise Exception(
         #     """
         #     Need more context. Should add the following:
@@ -378,7 +522,11 @@ class FeedbackAutomator(FeedbackAutomatorBase):
                 print(f'WARNING: Grade has been floored from {e} to {grade}')
         except ValueError:
             custom_feedback = grade
-            print(f'Providing custom feedback {custom_feedback}')
+            confirmation = input(
+                f'Providing custom feedback {custom_feedback}, ok? (y/n)'
+            )
+            if confirmation == 'n':
+                return self.assess()
 
     def comment_bank(self, comment_index):
         """
