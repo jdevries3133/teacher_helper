@@ -33,6 +33,7 @@ from selenium.common.exceptions import (
 
 from .automator import ClassroomAutomator
 from .exceptions import ClassroomNameException
+from .xpaths import Xpaths
 
 
 class FeedbackViewUtils(ClassroomAutomator):
@@ -78,24 +79,19 @@ class FeedbackViewUtils(ClassroomAutomator):
         """
         Actually put the feedback into google classroom
         """
-        input_xpath = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/'
-            'div/div[2]/div/div[2]/div[2]/div[1]/div[1]/div[1]/input'
-        )
         input_el = WebDriverWait(self.drive, 20).until(
             EC.element_to_be_clickable(
                 (
                     By.XPATH,
-                    input_xpath
+                    Xpaths.fb_private_comment_input
                 )
             )
         )
         input_el.send_keys(feedback)
-        post_button_xpath = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/'
-            'div/div[3]/div/div[1]/c-wiz/div/div[2]/div[2]/div[2]'
+        submit_button = self.driver.find_element_by_xpath(
+            Xpaths.fb_private_comment_submit
         )
-        self.driver.find_element_by_xpath(post_button_xpath).click()
+        submit_button.click()
 
     def _input_grade(self, grade: int):
         """
@@ -106,13 +102,10 @@ class FeedbackViewUtils(ClassroomAutomator):
             EC.presence_of_element_located(
                 (
                     By.XPATH,
-                    # grade input element
-                    '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/'
-                    'div[1]/div/div[2]/div/div[2]/div[2]/div[1]/div[1]/div[1]/input'
+                    Xpaths.fb_grade_input
                 )
             )
         ).send_keys(str(grade))
-        breakpoint()
 
     def view_slide(self, slide: int):
         """
@@ -130,7 +123,7 @@ class FeedbackViewUtils(ClassroomAutomator):
             EC.presence_of_element_located(
                 (
                     By.XPATH,
-                    '/html/body/div[4]/div/table/tbody/tr/td[1]/div[2]/div'
+                    Xpaths.fb_google_slide_thumbnail_drawer
                 )
             )
         )
@@ -171,27 +164,25 @@ class FeedbackViewUtils(ClassroomAutomator):
 
     def _av_sort_by_status(self):
         # open dropdown
-        student_dropdown_xpath = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[1]/div'
-        )
         WebDriverWait(self.driver, 30).until(EC.element_to_be_clickable(
-            (By.XPATH, student_dropdown_xpath)
+            (
+                By.XPATH,
+                Xpaths.fb_student_dropdown_xpath
+            )
         )).click()
         # sort by status
-        status_xpath = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[1]/div/div[2]'
-            '/div[1]/div[4]/div[3]/span[3]'
-        )
         WebDriverWait(self.driver, 60).until(EC.element_to_be_clickable(
-            (By.XPATH, status_xpath)
+            (
+                By.XPATH,
+                Xpaths.fb_status_sort_button_xpath
+            )
         )).click()
         # click on first student
-        first_student = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[1]/div/div[2]'
-            '/div[2]/div[1]'
-        )
         WebDriverWait(self.driver, 5).until(EC.element_to_be_clickable(
-            (By.XPATH, first_student)
+            (
+                By.XPATH,
+                Xpaths.fb_first_student_in_dropdown
+            )
         )).click()
 
     def _av_get_grade_divisior(self):
@@ -199,9 +190,7 @@ class FeedbackViewUtils(ClassroomAutomator):
             EC.visibility_of_element_located(
                 (
                     By.XPATH,
-                    '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/'
-                    'div[1]/div/div[2]/div/div[2]/div[2]/div[1]/div[1]/span/span'
-                    '/span'
+                    Xpaths.fb_grade_divisor
                 )
             )
         )
@@ -216,11 +205,9 @@ class FeedbackViewUtils(ClassroomAutomator):
         and iterates through them, returning when it finds the one that isn't
         an empty string.
         """
-        names_xpath = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[1]/div/div[1]'
-            '/div[1]/div[*]/span/div/div[1]'
+        names = self.driver.find_elements_by_xpath(
+            Xpaths.fb_dropdown_values
         )
-        names = self.driver.find_elements_by_xpath(names_xpath)
         for n in names:
             if n.text:
                 self.context['name'] = n.text
@@ -229,46 +216,32 @@ class FeedbackViewUtils(ClassroomAutomator):
 
     def _av_parse_attachments(self):
         self.context['attachments'] = []
-        common_parent = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/div'
-            '/div[1]/div[2]/div/div[2]/div/div/div'
-        )
-        single_assignment_label = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/div'
-            '/div[1]/div[2]/div/div[2]/div/div/div/span/div[2]/div/span[2]'
-        )
-        multiple_assignment_labels = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/div'
-            '/div[1]/div[2]/div/div[2]/div/div/div/div/span/div/div/span[2]'
-        )
         # wait for parent element to mount
         WebDriverWait(self.driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, common_parent))
+            EC.presence_of_element_located(
+                (
+                    By.XPATH,
+                    Xpaths.fb_attachments_common_parent
+                )
+            )
         )
         try:
             label_el = self.driver.find_element_by_xpath(
-                single_assignment_label
+                Xpaths.fb_single_attachment_label
             )
-            if 'Veerendrasakthi Prabhurajan' in label_el.text:
-                print('bp')
             self.context['attachments'].append({
                 'name': label_el.text,
-                'label_xpath': single_assignment_label,
+                'label_xpath': Xpaths.fb_single_attachment_label,
                 'href': 'not yet implemented in _av_parse_attachments()'
             })
         except NoSuchElementException:
             label_els = self.driver.find_elements_by_xpath(
-                multiple_assignment_labels
+                Xpaths.fb_multiple_attachment_label
             )
             for i, el in enumerate(label_els):
-                xpath = (
-                    '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/di'
-                    f'v[1]/div/div[1]/div[2]/div/div[2]/div/div[{i}]/div/div/sp'
-                    f'an/div[{i}]/div/span[2]'
-                )
                 self.context['attachments'].append({
                     'name': el.text,
-                    'label_xpath': xpath,
+                    'label_xpath': Xpaths.fb_attachment_label_xpath(i),
                     'href': 'not yet implemented in _av_parse_attachments()'
                 })
 
@@ -425,7 +398,7 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
             self._av_get_current_name()
         assert self.current_student < len(self.context['assignment_statuses'])
         self.driver.find_element_by_xpath(
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[1]/div[1]/div[2]/div[2]'
+            Xpaths.fb_next_student_button
         ).click()
         # if program moves too fast, there will be an alert
         try:

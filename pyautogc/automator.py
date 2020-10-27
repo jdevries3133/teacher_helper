@@ -15,6 +15,7 @@ from .exceptions import (
     CAException,
     AssignmentNamingConflict
 )
+from .xpaths import Xpaths
 
 
 class ClassroomAutomator:
@@ -25,18 +26,16 @@ class ClassroomAutomator:
         self.password = password
         self.driver = webdriver.Firefox()
         self.driver.get('https://classroom.google.com/u/1/h')
-        xpath = '//*[@id="identifierId"]'
-        username_elem = self.driver.find_element_by_xpath(xpath)
+        username_elem = self.driver.find_element_by_xpath(
+            Xpaths.login_username
+        )
         username_elem.clear()
         username_elem.send_keys(self.username)
         username_elem.send_keys(Keys.RETURN)
         sleep(2.1)
-        xpath = (
-            '/html/body/div[1]/div[1]/div[2]/div/div[2]/div/div/'
-            'div[2]/div/div[1]/div/form/span/section/div/div/div[1]/div[1]'
-            '/div/div/div/div/div[1]/div/div[1]/input'
+        password_elem = self.driver.find_element_by_xpath(
+            Xpaths.login_password
         )
-        password_elem = self.driver.find_element_by_xpath(xpath)
         password_elem.clear()
         password_elem.send_keys(self.password)
         password_elem.send_keys(Keys.RETURN)
@@ -56,13 +55,16 @@ class ClassroomAutomator:
         homepage_anchor_tags_for_each_classroom = (
             '/html/body/div[2]/div/div[2]/div/ol/li/div[1]/div[3]/h2/a[1]'
         )
-        els = WebDriverWait(
-            self.driver, 10
-        ).until(EC.presence_of_element_located(
-            (By.XPATH, homepage_anchor_tags_for_each_classroom)
-        ))
+        els = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(
+                (
+                    By.XPATH, 
+                    Xpaths.homepage_anchor_tags_for_each_classroom
+                )
+            )
+        )
         els = self.driver.find_elements(
-            By.XPATH, homepage_anchor_tags_for_each_classroom
+            By.XPATH, Xpaths.homepage_anchor_tags_for_each_classroom
         )
         for el in els:
             self.classrooms.setdefault(el.text, el.get_attribute('href'))
@@ -119,9 +121,13 @@ class ClassroomAutomator:
             raise CAException(
                 f'{download_type} is not a valid download type'
             )
-        input_path = '/html/body/div[1]/div[4]/div[2]/div[1]/div[1]/div/input'
         inp = WebDriverWait(self.driver, 20).until(
-            EC.presence_of_element_located((By.XPATH, input_path))
+            EC.presence_of_element_located(
+                (
+                    By.XPATH,
+                    Xpaths.fb_menu_bar_text_search
+                )
+            )
         )
         inp.send_keys(download_queries[download_type] + u'\ue007')
         inp.clear()
@@ -138,14 +144,11 @@ class ClassroomAutomator:
             )
         if self.current_view != 'classwork':
             self.navigate_to('classwork')
-        spans_with_assignment_names = WebDriverWait(
-            self.driver, 40
-        ).until(
+        spans_with_assignment_names = WebDriverWait(self.driver, 40).until(
             EC.presence_of_all_elements_located(
                 (
                     By.XPATH,
-                    '/html/body/div[2]/div/main/div/div/div[4]/ol/li/div/div/'
-                    'div/div/ol/li/div/div/div/div/div/span'
+                    Xpaths.cw_all_assignment_names
                 )
             )
         )
@@ -180,7 +183,7 @@ class ClassroomAutomator:
         # might need try/catch if it happens too fast; need to see what error is
         # first.
         link_anchor = span_with_assignment_name.find_element_by_xpath(
-            './../../../../../div[2]/div[2]/div/a'
+            Xpaths.cw_anchor_tag_relative_to_assignment_name_span 
         )
         link = link_anchor.get_attribute('href')
         return link
@@ -201,14 +204,14 @@ class ClassroomAutomator:
                 f'{view} is not a valid view.'
             )
         # CLASSROOM AND CLASSWORK (same validation logic)
-        elif view == 'classroom' or view == 'classwork':
+        if view in ['classroom', 'classwork']:
             if 'classroom_name' not in kwargs:
                 raise InvalidViewError(
                     'To navigate to a classroom or classowork view, '
                     'classroom_name must be passed as a keyword argument'
                 )
         # ASSIGNMENT VIEW
-        elif view == 'assignment' or view == 'assignment_feedback':
+        if view in ['assignment', 'assignment_feedback']:
             if self.current_view not in [
                 'classwork',
                 'classroom',
