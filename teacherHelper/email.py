@@ -1,5 +1,6 @@
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
 import smtplib
 import ssl
 import os
@@ -9,46 +10,55 @@ class Email:
     def __init__(self, username, password):
         self.username = username
         self.password = password
-        self.templated_loaded = False
-        self.template_filled = False
+        self.template_dir = Path(Path(__file__).parent, 'html_email_templates')
 
-    def email(self, students, template_flag):
-        if template_flag == 'soundtrap':
-            no_pass = [s for s in students if not hasattr(
-                s, 'soundtrap_password')]
-            if no_pass:
-                nl = '\n'
-                raise Exception(
-                    f'The following students do not have a password '
-                    f'assigned to them:\n{[(i.name + nl) for i in no_pass]}'
-                )
-            # init ssl
-            context = ssl.create_default_context()
-            with smtplib.SMTP_SSL('smtp.gmail.com', port=465, context=context) as server:
-                server.login(
-                    os.getenv('GMAIL_USERNAME'),
-                    os.getenv('GMAIL_PASSWORD'),
-                )
-                for st in students:
-                    me = 'jdevries@empacad.org'
-                    you = st.email
-                    msg = MIMEMultipart('alternative')
-                    msg['Subject'] = 'Your Soundtrap Account is Ready!'
-                    msg['From'] = me
-                    msg['To'] = you
-                    text, html = Email.soundtrap_template(
-                        st.first_name, st.email, st.soundtrap_password)
-                    part1 = MIMEText(text, 'plain')
-                    part2 = MIMEText(html, 'html')
-                    msg.attach(part1)
-                    msg.attach(part2)
-                    resp = server.sendmail(me, you, msg.as_string())
-                    print(resp)
+    def email(self, to, subject, message: list, html=False):
+        """
+        Send plain text emails en masse.
+
+        Set html, and the message should be a tuple:
+            message[0] = plain text
+            message[1] = html
+
+        The html will still be inserted into the default template, including
+        your signature.
+        """
+        if not isinstance(message, list):
+            raise Exception(
+                'Message must be a list; an array of paragraphs. Each string '
+                'in the list will be mapped to a <p> tag in the html, or '
+                'joined with a double newline in the plain text.'
+            )
+        # init ssl
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL('smtp.gmail.com', port=465, context=context) as server:
+            server.login(
+                self.username,
+                self.password
+            )
+            me = 'jdevries@empacad.org'
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = subject
+            msg['From'] = me
+            msg['To'] = to
+            html, text = self.make_message(message)
+            part1 = MIMEText(text, 'plain')
+            part2 = MIMEText(html, 'html')
+            msg.attach(part1)
+            msg.attach(part2)
+            server.sendmail(me, to, msg.as_string())
         return 0
 
-    def import_template(self, html_path, plaintext_path, context, strict=True):
+    def make_message(self, message):
         """
-        Import an html email template at the path. Check for valid html,
-        ensure that context fields exist in the html and plaintext emails.
+        Make a message with the default html template.
         """
-        pass
+        # html
+        with open(Path(self.template_dir, 'default.html'), 'r') as htmlf:
+            html_message = htmlf.read()
+        paragraphs = '\n'.join([
+            f"<p style=\"font-family: Helvetica, Arial, Sans-Serif;\">{i}</p>"
+            for i in message
+        ])
+        html_message.replace('{{insert}}', paragraphs)
+        return html_message, '\n\n'.join(message)
