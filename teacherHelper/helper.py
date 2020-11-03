@@ -36,6 +36,8 @@ class Helper(OnCourseMixin, SillyMixin):
         best matching student is correct. Optionally, set a levenshtien distance
         threshold below which students will not be included.
         """
+        if not isinstance(student_name, str):
+            raise Exception("Student name must be a string")
         if not len(student_name.split(' ')) > 1 and auto_yes:
             """
             print(

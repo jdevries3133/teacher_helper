@@ -7,12 +7,18 @@ import os
 
 
 class Email:
-    def __init__(self, username, password):
+    def __init__(self, username=None, password=None):
         self.username = username
         self.password = password
+        # use my default env variables for username and password if none were
+        # passed
+        if not self.username:
+            self.username = os.getenv('EMAIL_USERNAME')
+        if not self.password:
+            self.password = os.getenv('EMAIL_PASSWORD')
         self.template_dir = Path(Path(__file__).parent, 'html_email_templates')
 
-    def email(self, to, subject, message: list, html=False):
+    def send(self, to, subject, message: list, html=False):
         """
         Send plain text emails en masse.
 
@@ -47,7 +53,6 @@ class Email:
             msg.attach(part1)
             msg.attach(part2)
             server.sendmail(me, to, msg.as_string())
-        return 0
 
     def make_message(self, message):
         """
@@ -60,5 +65,4 @@ class Email:
             f"<p style=\"font-family: Helvetica, Arial, Sans-Serif;\">{i}</p>"
             for i in message
         ])
-        html_message.replace('{{insert}}', paragraphs)
-        return html_message, '\n\n'.join(message)
+        return html_message.replace('{{insert}}', paragraphs), '\n\n'.join(message)

@@ -58,7 +58,7 @@ class ClassroomAutomator:
         els = WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located(
                 (
-                    By.XPATH, 
+                    By.XPATH,
                     Xpaths.homepage_anchor_tags_for_each_classroom
                 )
             )
@@ -183,7 +183,7 @@ class ClassroomAutomator:
         # might need try/catch if it happens too fast; need to see what error is
         # first.
         link_anchor = span_with_assignment_name.find_element_by_xpath(
-            Xpaths.cw_anchor_tag_relative_to_assignment_name_span 
+            Xpaths.cw_anchor_tag_relative_to_assignment_name_span
         )
         link = link_anchor.get_attribute('href')
         return link
@@ -203,6 +203,7 @@ class ClassroomAutomator:
             raise InvalidViewError(
                 f'{view} is not a valid view.'
             )
+
         # CLASSROOM AND CLASSWORK (same validation logic)
         if view in ['classroom', 'classwork']:
             if 'classroom_name' not in kwargs:
@@ -211,7 +212,7 @@ class ClassroomAutomator:
                     'classroom_name must be passed as a keyword argument'
                 )
         # ASSIGNMENT VIEW
-        if view in ['assignment', 'assignment_feedback']:
+        elif view in ['assignment', 'assignment_feedback']:
             if self.current_view not in [
                 'classwork',
                 'classroom',

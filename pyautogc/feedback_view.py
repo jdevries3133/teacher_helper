@@ -27,12 +27,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import (
-    NoSuchElementException, 
+    ElementNotInteractableException,
+    NoSuchElementException,
     NoAlertPresentException
 )
 
 from .automator import ClassroomAutomator
-from .exceptions import ClassroomNameException
+from .exceptions import CAException, ClassroomNameException
 from .xpaths import Xpaths
 
 
@@ -79,7 +80,9 @@ class FeedbackViewUtils(ClassroomAutomator):
         """
         Actually put the feedback into google classroom
         """
-        input_el = WebDriverWait(self.drive, 20).until(
+        print('inputting feedback')
+        sleep(1)
+        input_el = WebDriverWait(self.driver, 20).until(
             EC.element_to_be_clickable(
                 (
                     By.XPATH,
@@ -92,12 +95,15 @@ class FeedbackViewUtils(ClassroomAutomator):
             Xpaths.fb_private_comment_submit
         )
         submit_button.click()
+        print('feedback inputted')
+        sleep(1)
 
     def _input_grade(self, grade: int):
         """
         Actually put the grade into google classroom. CAREFUL, this function
         performs no validation against the DOM.
         """
+        print('inputting grade')
         WebDriverWait(self.driver, 10).until(
             EC.presence_of_element_located(
                 (
@@ -106,6 +112,8 @@ class FeedbackViewUtils(ClassroomAutomator):
                 )
             )
         ).send_keys(str(grade))
+        print('grade inputted')
+        sleep(1)
 
     def view_slide(self, slide: int):
         """
@@ -127,9 +135,12 @@ class FeedbackViewUtils(ClassroomAutomator):
                 )
             )
         )
-        for _ in range(slide - 1):
-            slide_tiles_drawer.send_keys(Keys.DOWN)
-            sleep(0.2)
+        try:
+            for _ in range(slide - 1):
+                slide_tiles_drawer.send_keys(Keys.DOWN)
+                sleep(0.2)
+        except ElementNotInteractableException:
+            print('Cannot scroll')
         self.driver.switch_to_default_content()
 
     # TODO: move all the xpaths out into a constants folder or file
@@ -212,7 +223,8 @@ class FeedbackViewUtils(ClassroomAutomator):
             if n.text:
                 self.context['name'] = n.text
                 return n.text
-        raise Exception("Function should have returned; something has changed.")
+        raise Exception(
+            "Function should have returned; something has changed.")
 
     def _av_parse_attachments(self):
         self.context['attachments'] = []
@@ -255,16 +267,18 @@ class FeedbackViewUtils(ClassroomAutomator):
         ]:
             if normalized in status.lower():
                 return normalized
-        raise Exception(f'Invalid status: {status}')
+        print('unrecognized status: ', status)
+        print('ADD SUPPORT FOR GRADED STATUS')
 
 
 class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
     """
     Iteratively assess all assignments of a given name (str) in given classrooms
-    (list).
+    (list). Inherits __init__ from FeedbackViewUtils
     """
 
-    def __iter__(self):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
         self.navigate_to('classwork', classroom_name=self.classroom_names[0])
         self.navigate_to(
             'assignment_feedback',
@@ -272,20 +286,27 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
         )
         self._assignment_view_setup()
         self._get_context()
+
+    def __iter__(self):
         return self
 
     def __next__(self):
         self.assess()
         self.give_feedback()
         self.grade()
-
+        # increment student
         self.current_student += 1
+        # if we are out of students
         if self.current_student >= len(self.context.get('assignment_statuses')) - 1:
+            # increment classroom
             self.current_classroom += 1
+            # if we are out of classoroms
             if self.current_classroom >= len(self.classroom_names) - 1:
+                # stop
                 raise StopIteration
-            else:
-                self._next_classroom()
+            # go to next classroom; refresh context
+            self._next_classroom()
+        # go to next student, update context as needed
         self._next_student()
         return self.driver, SimpleNamespace(**self.context)
 
@@ -341,7 +362,7 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
             - Save all custom feedback to a condensed report
         ... those would be good reasons to overwrite this.
         """
-        self._input_feedback(self.context.get('feedback'))  # in FeedbackViewUtils
+        self._input_feedback(self.context['feedback'])  # in FeedbackViewUtils
 
     def grade(self):
         """
@@ -353,20 +374,21 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
             - Append to a gradebook
         ... those would be a good reasons to subclass this.
         """
-        self.assess()
         self._validate_grade()
         self._input_grade(self.context['grade'])
 
-    def is_grade_valid(self):
+    def is_grade_valid(self, grade):
         """
         Documented for user. Returns boolean rather than raising
         exception.
         """
-        try:
-            self._validate_grade()
+
+        if (
+            isinstance(grade, int)
+            and grade <= self.context['grade_divisor']
+        ):
             return True
-        except AssertionError:
-            return False
+        return False
 
     def _validate_grade(self):
         """
@@ -377,8 +399,8 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
             -- also --
             - Assign self.context['percentage_grade']
         """
-        assert isinstance(self.context.get('grade'), int)
-        assert self.context['grade'] <= self.context['grade_divisor']
+        if not self.is_grade_valid(self.context['grade']):
+            raise CAException(f'Invalid grade: {self.context["grade"]}')
         self.context['percentage_grade'] = (
             self.context['grade'] / self.context['grade_divisor']
         )
@@ -388,15 +410,6 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
         Does not increment counter. Only performs actions necessary to click
         on to the next student, including 
         """
-        if self.current_student == -1:
-            self._get_context()
-            return
-        else:
-            # this func is called by _get_context(), but it is the only func
-            # within _get_context that must be called after each STUDENT, not
-            # each classroom; thus, the if / else
-            self._av_get_current_name()
-        assert self.current_student < len(self.context['assignment_statuses'])
         self.driver.find_element_by_xpath(
             Xpaths.fb_next_student_button
         ).click()
@@ -404,12 +417,13 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
         try:
             # try to dismiss the alert and try again
             self.driver.switch_to.alert.accept()
-            return self._next_student()
+            # after dismissing the dialogue, it will automatically advance
+            # to the next student, so there is no need to call the function
+            # and press the button again.
         except NoAlertPresentException:
             # if there is no alert, move on
             pass
-        # TODO: check if elimination of call to self._get_context() at this
-        # line broke anything
+        self._get_context()
 
     def _next_classroom(self):
         self.current_student = -1
@@ -439,18 +453,7 @@ class FeedbackAutomatorBase(FeedbackViewUtils, ABC):
         """
         self._av_parse_attachments()
         self._av_get_grade_divisior()
-        # raise Exception(
-        #     """
-        #     Need more context. Should add the following:
-        #         self.context['name'] => current student's name
-        #             * can probably be sliced from all names and statuses by current_student index
-        #         self.context['status'] => assignment status
-        #             * can probably be sliced from all names and statuses by current_student index
-        #         self.context['grade_divisor'] => for calculating percentage grades
-        #         self.context['is_assignment_graded'] => bool
-
-        #     """
-        # )
+        self._av_get_current_name()
         return self.context
 
 
