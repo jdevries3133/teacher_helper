@@ -16,7 +16,7 @@ from pathlib import Path
 
 from fuzzywuzzy import process
 
-from helper import Helper
+from teacherHelper import Helper
 from paychex import Paychex
 
 

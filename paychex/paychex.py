@@ -228,8 +228,11 @@ class Paychex:
         return update
 
     def _read_cached_state(self):
-        with open(self.clock_state_file, 'r') as txt:
-            state = txt.read().strip()
+        try:
+            with open(self.clock_state_file, 'r') as txt:
+                state = txt.read().strip()
+        except FileNotFoundError:
+            return 'unknown'
         if state != 'in' and state != 'out':
             if not self.is_logged_in:
                 self.login()

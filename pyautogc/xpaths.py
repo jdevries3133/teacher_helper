@@ -12,6 +12,7 @@ xpath, especially the ones that do non-trivial or unobvious things, for ease
 of updating in case of a frontend update to Google Classroom.
 """
 
+
 class Login:
     # username text input
     login_username = '//*[@id="identifierId"]'
@@ -45,8 +46,9 @@ class Classwork:
     # is used to traverse up the tree, then back down to the anchor tag
     # containaing the necessary href
     cw_anchor_tag_relative_to_assignment_name_span = (
-            './../../../../../div[2]/div[2]/div/a'
+        './../../../../../div[2]/div[2]/div/a'
     )
+
 
 class Feedback:
     """
@@ -64,20 +66,20 @@ class Feedback:
 
     # text input field for private comment to student
     fb_private_comment_input = (
-        '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/'
-        'div/div[2]/div/div[2]/div[2]/div[1]/div[1]/div[1]/input'
+        '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/div/'
+        'div[3]/div/div[1]/c-wiz/div/div[2]/div[1]/div[1]/div[2]/textarea'
     )
 
     # button to post private comment to student
     fb_private_comment_submit = (
-            '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/'
-            'div/div[3]/div/div[1]/c-wiz/div/div[2]/div[2]/div[2]'
+        '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/'
+        'div/div[3]/div/div[1]/c-wiz/div/div[2]/div[2]/div[2]'
     )
 
     # text input field for student grade
     fb_grade_input = (
-        '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/'
-        'div[1]/div/div[2]/div/div[2]/div[2]/div[1]/div[1]/div[1]/input'
+        '/html/body/div[4]/c-wiz/c-wiz/main/div[2]/div[2]/div[2]/div[1]/'
+        'div/div[2]/div/div[2]/div[2]/div[1]/div[1]/div[1]/input'
     )
 
     # drawer that holds google slide thumbnails, nested within an iframe
@@ -150,8 +152,6 @@ class Feedback:
             f'an/div[{index}]/div/span[2]'
         )
         return xpath
-
-
 
 
 class Xpaths(Classwork, Login, Homepage, Feedback):
