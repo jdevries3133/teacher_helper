@@ -50,11 +50,11 @@ class Paychex:
 
     def __enter__(self, *args, **kwargs):
         if self.headless:
-            chrome_options = Options()
-            chrome_options.add_argument('--headless')
-            chrome_options.add_argument('--window-size=1440x789')
+            # chrome_options = Options()
+            # chrome_options.add_argument('--headless')
+            # chrome_options.add_argument('--window-size=1440x789')
             # self.driver = webdriver.Chrome(options=chrome_options)
-            self.driver = webdriver.Firefox()
+            self.driver = webdriver.Firefox(service_log_path=os.path.devnull)
             return self
         self.driver = webdriver.Firefox()
         return self
@@ -86,7 +86,7 @@ class Paychex:
                 if choice == 'in':
                     self.clock_in()
                     break
-                else:
+                if choice == 'out':
                     self.clock_out()
                     break
                 print('Enter "in" or "out"\n')
