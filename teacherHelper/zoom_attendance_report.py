@@ -336,14 +336,14 @@ class DynamicDateColorer:  # TODO test that this is working right.
     Class meetings after October 4, 2020 changed from 30 to 45 minutes.
     Hence, the coloring of cells needs to be responsive.
     """
+
     def __init__(self, *a, **kw):
         # define constants
         self.OCTOBER_4_2020 = 1601769600  # timestamp
-        self._30_MIN_GREEN =  25
+        self._30_MIN_GREEN = 25
         self._30_MIN_YELLOW = 18
         self._45_MIN_GREEN = 40
         self._45_MIN_YELLOW = 30
-
 
         def fill(colorcode):
             return PatternFill(
@@ -354,7 +354,7 @@ class DynamicDateColorer:  # TODO test that this is working right.
 
         self.colors = {
             'green': fill('18fc03'),
-            'yellow':fill('fcf403'),
+            'yellow': fill('fcf403'),
             'red': fill('fc0303'),
         }
 
@@ -406,7 +406,6 @@ class ExcelWriter(DynamicDateColorer):
                 highlight sheet so you can at least see how many anonymous
                 students there are, and what names they are using.
     """
-
 
     def __init__(self, meeting_set: MeetingSet, *a, **kw):
         super().__init__()
@@ -475,11 +474,13 @@ class ExcelWriter(DynamicDateColorer):
             f' 10/4/2020, or {self._45_MIN_YELLOW} after 10/4/2020.'
         )
 
+
 class MainSheetWriter(DynamicDateColorer, HelperConsumer):
     """
     Note that this class does not support dynamic coloring, it uses the
     constants defined in ExcelStyles above.
     """
+
     def __init__(self, meeting_set: MeetingSet, sheet, start_row=0):
         super().__init__()
         self.sheet = sheet
@@ -494,8 +495,9 @@ class MainSheetWriter(DynamicDateColorer, HelperConsumer):
 
         # map of meeting header strings to their timestamp, for later.
         self.name_to_timestamp_map = {
-            m.__str__() : m.datetime.timestamp() for m in meeting_set.meetings
-        } 
+            m.__str__(): m.datetime.timestamp() for m in meeting_set.meetings
+        }
+
     def write_sheet(self):
         """
         Orchestrate private functions below.
@@ -519,9 +521,10 @@ class MainSheetWriter(DynamicDateColorer, HelperConsumer):
         For each group, write a row of headers that describe each meeting the
         group had.
         """
-        group_topics = ' ,'.join( topic_set := {t.topic for t in self.cur_group})
+        group_topics = ' ,'.join(
+            topic_set := {t.topic for t in self.cur_group})
         temp = self.sheet.cell(row=self.cur_row, column=1)
-        s = 's' if len(topic_set) > 1 else '' # plurality
+        s = 's' if len(topic_set) > 1 else ''  # plurality
         temp.value = 'Dynamic Group'
         temp.font = Font(size=32, bold=True)
 
@@ -548,7 +551,9 @@ class MainSheetWriter(DynamicDateColorer, HelperConsumer):
         """
         Write row for each student.
         """
-        for student in self.cur_group_students:
+        students = list(self.cur_group_students)
+        students.sort(key=lambda s: s.last_name)
+        for student in students:
             # write student name
             last_name_cell = self.sheet.cell(row=self.cur_row, column=1)
             last_name_cell.value = student.last_name
