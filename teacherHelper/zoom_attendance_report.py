@@ -1,9 +1,6 @@
-import csv
 from datetime import datetime
-import dbm
 from pathlib import Path
 import logging
-import statistics
 import string
 import re
 
@@ -11,7 +8,6 @@ from fuzzywuzzy import process
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill, Font
 
-from .tools.csv_parser import BaseCsvParser
 try:
     from .manual_zoom_matches import MANUAL_FIXES
 except ImportError:
@@ -23,11 +19,14 @@ except ImportError:
         contain student names.
         """
         return name
+
+
 from .helper import Helper
 
+
 class HelperConsumer:
-    def __init__(self):
-        self.helper = Helper.read_cache()
+    helper = Helper.read_cache()
+
 
 class Meeting(HelperConsumer):
     """
@@ -41,15 +40,18 @@ class Meeting(HelperConsumer):
 
     """
 
-    def __init__(self, path: Path):
+    def __init__(self, csv_string: str):
         super().__init__()
-        self.path = path
+        self.csv_string = csv_string
         self.attendees = []
+        self.unidentifiable = []
         self.datetime = None
         self.duration = None
         self.topic = None
         self.total_participants = None
-        self.open_report()
+        self.grade_level = None
+        self.homeroom = None
+        self.read_report()
 
     def __repr__(self):
         outstr = (
@@ -59,7 +61,7 @@ class Meeting(HelperConsumer):
         return outstr
 
     def __str__(self):
-        return self.path.stem
+        return f'{self.datetime.isoformat()}; {self.topic}'
 
     def __eq__(self, other):
         # input validation
@@ -94,23 +96,24 @@ class Meeting(HelperConsumer):
     def __len__(self):
         return len(self.attendees)
 
-    def open_report(self):
+    def read_report(self):
         """
-        Opens, reads, and parses zoom report such that IO will not need to
-        be performed again.
+        Reads, and parses zoom report
 
         assigns attributes:
         self.topic
         self.grade_level
         self.datetime
         """
-        with open(self.path, 'r') as csvfile:
-            rows = [r for r in csv.reader(csvfile)]
+        rows = []
+        for line in self.csv_string.split('\n')[:-1]:
+            line = line.strip()
+            rows.append(line.split(','))
         # raise an exception if row 2 is not blank.
         # tolerate the case of row[2] = ['', '', '', ...]
         exception_message = (
-            'Zoom report must contain meeting information. The '
-            f'Report at {self.path} does not appear to contain '
+            'Zoom report must contain meeting information. The report for '
+            f'{self.topic} at {self.datetime} does not appear to contain '
             'meeting information.'
         )
         if rows[2]:
@@ -135,22 +138,25 @@ class Meeting(HelperConsumer):
         if 'pm' in time_str.lower():
             hour += 12
         self.datetime = datetime(year, month, day, hour, minute)
-        for st in self.helper.students.values():
-            st.zoom_attendance_record = {}
         grade_levels_within = set()
+        homerooms_within = set()
         for row in rows[4:]:
             duration = row[2]
             st = self.match_student(row[0])
             if not st:
+                self.unidentifiable.append(row[0])
                 continue
             grade_levels_within.add(st.grade_level)
+            homerooms_within.add(st.homeroom)
             st.zoom_attendance_record.setdefault(
-                (self.topic + ';' + self.datetime.isoformat()),
-                duration
+                (self.__str__()),
+                int(duration)
             )
             self.attendees.append(st)
         if len(grade_levels_within) <= 1:
             self.grade_level = grade_levels_within.pop()
+        if len(homerooms_within) <= 1:
+            self.homeroom = homerooms_within.pop()
 
     def match_student(self, name):
         """
@@ -178,11 +184,11 @@ class Meeting(HelperConsumer):
         if st:
             return st
         for part in [i for i in re.split(' |.', name) if i]:
-            st = self.try_matching_student_within_grade(part)
+            st = self.try_matching_student_within_subgroup(part)
             if st:
                 return st
 
-    def try_matching_student_within_grade(self, student_name):
+    def try_matching_student_within_subgroup(self, student_name):
         """
         Unlike in the self.helper student matching function, this class is aware of
         the grade level of the student it is trying to match. If the self.helper
@@ -190,11 +196,18 @@ class Meeting(HelperConsumer):
         student through process of elimination within their own grade. This
         helps match more students who only provide their first name.
         """
+        if self.homeroom:  # preferentially search within homeroom
+            compare_attr = 'homeroom'
+        elif self.grade_level:  # fallback on grade level
+            compare_attr = 'grade_level'
+        else:
+            return  # no subgroup to compare within
+
         first_name_match = process.extract(
             student_name,
             [
                 s.first_name for s in self.helper.students.values()
-                if s.grade_level == self.grade_level
+                if s.__dict__[compare_attr] == self.__dict__[compare_attr]
             ],
             limit=3
         )
@@ -223,7 +236,7 @@ class Meeting(HelperConsumer):
                     return self.helper.students[n]
 
 
-class MeetingSet:
+class MeetingSet(HelperConsumer):
     """
 
     # General Usage
@@ -260,23 +273,30 @@ class MeetingSet:
     method.
     """
 
-    def __init__(self, dir_path: Path, group_map=None, trust_topics=False):
+    def __init__(self, csv_strings: list, group_map=None, trust_topics=False):
         super().__init__()
-        self.dir_path = dir_path
+        self.csv_strings = csv_strings
         self.groups = []
+        self.meetings = []  # all meetings in a flattened list
         self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.8
 
     def process(self):
         """
-        Called by __init__; produces data structure
+        Generator that produces data structure. Yields a meeting immediately
+        after it has been parsed.
         """
+        for st in self.helper.students.values():
+            st.zoom_attendance_record = {}
         # append all meetings to groupings in self.groups
-        for meeting in self.iter_csvs():
+        for csv_string in self.csv_strings:
+            meeting = Meeting(csv_string)
+            self.meetings.append(meeting)
             match = self.match_meeting_with_group_by_union(meeting)
             if match:
                 match.append(meeting)
             else:
                 self.groups.append([meeting])
+            yield meeting  # report progress up the callstack.
 
     def match_meeting_with_group_by_union(self, meeting: Meeting):
         """
@@ -310,71 +330,20 @@ class MeetingSet:
                 return group
         return []
 
-    def rename_csv_files(self):
-        """
-        Provide verbose names to csv file.
-        """
-        for report_path in self.dir_path.iterdir():
-            with open(report_path, 'r') as csvf:
-                rows = [r for r in csv.reader(csvf)]
-            topic = rows[1][1]
-            start_time = rows[1][2]
-            date = start_time.split(' ')[0].replace('/', '-')
-            new_name = topic + ' ' + date + '.csv'
-            report_path.rename(Path(report_path.parent, new_name))
 
-    def iter_csvs(self):
-        """
-        Skip anything that isn't a real csv file. Calls self.open_report(),
-        which loads the report into memory as attributes of self; there is no
-        need to yield anything, but it yields the path to the current csv
-        for convenience.
-        """
-        for i in self.dir_path.iterdir():
-            if i.name[-4:] != '.csv':
-                continue
-            if i.name[0] == "~" or i.name[0] == ".":
-                continue
-            yield Meeting(i)
-
-
-class ExcelWriter:
+class DynamicDateColorer:  # TODO test that this is working right.
     """
-    Writes a MeetingSet into an excel report
-
-    Optionally, pass attendance_duration_thresholds: dict as a kwarg. It should
-    look like this:
-
-        {
-            'color: str': 'minimum minutes of attendance: int',
-        }
-
-        For example:
-
-        {
-            'red': 5,
-            'yellow': 20,
-            'green': 30
-        }
-
-        You must provide these colors:
-            - 'red'
-            - 'yellow'
-            - 'green'
+    Class meetings after October 4, 2020 changed from 30 to 45 minutes.
+    Hence, the coloring of cells needs to be responsive.
     """
+    def __init__(self, *a, **kw):
+        # define constants
+        self.OCTOBER_4_2020 = 1601769600  # timestamp
+        self._30_MIN_GREEN =  25
+        self._30_MIN_YELLOW = 18
+        self._45_MIN_GREEN = 40
+        self._45_MIN_YELLOW = 30
 
-    def __init__(self, meetings: MeetingSet, *a, **kw):
-        super().__init__(*a, **kw)
-        self.meetings = meetings
-        self.thresholds = kw.get('attendance_duration_thresholds')
-        self.validate_or_generate_thresholds()
-        # init workbook
-        self.WB_OUT = Workbook()
-        self.WB_OUT.remove(self.WB_OUT.active)
-        self.styles = {
-            'h1': Font(size=30, bold=True, name='Cambria'),
-            'h2': Font(size=16, name='Calibri')
-        }
 
         def fill(colorcode):
             return PatternFill(
@@ -383,115 +352,227 @@ class ExcelWriter:
                 end_color=colorcode
             )
 
-        self.fills = {
+        self.colors = {
             'green': fill('18fc03'),
-            'yellow': fill('fcf403'),
-            'red': fill('fc0303')
+            'yellow':fill('fcf403'),
+            'red': fill('fc0303'),
         }
 
-    def validate_or_generate_thresholds(self):
-        if self.thresholds:
-            for color in ['red', 'yellow', 'green']:
-                assert color in self.thresholds
-            assert (
-                self.thresholds['red']
-                < self.thresholds['yellow']
-                < self.thresholds['green']
-            )
-            for i in self.thresholds.values():
-                assert isinstance(i, int)
-        else:
-            # assign defaults
-            self.thresholds = {}
-            self.thresholds['red'] = 0
-            self.thresholds['yellow'] = 15
-            self.thresholds['green'] = 30
+    def get_color(self, duration: int, timestamp: int):
+        if timestamp < self.OCTOBER_4_2020:
+            return self._30_min_class_color(duration)
+        return self._45_min_class_color(duration)
 
-    def generate_report(self, destination: Path, thresholds=None):
+    def _30_min_class_color(self, duration):
+        if duration > self._30_MIN_GREEN:
+            return self.colors.get('green')
+        if duration > self._30_MIN_YELLOW:
+            return self.colors.get('yellow')
+        return self.colors.get('red')
+
+    def _45_min_class_color(self, duration):
+        if duration > self._45_MIN_GREEN:
+            return self.colors.get('green')
+        if duration > self._45_MIN_YELLOW:
+            return self.colors.get('yellow')
+        return self.colors.get('red')
+
+
+class ExcelWriter(DynamicDateColorer):
+    """
+    Writes a MeetingSet into an excel report
+
+    Dynamically Grouped Sheet:
+        The master sheet contains a summary of all data in one place.
+        Students are listed from top to bottom by dynamic grouping,
+        and each meeting date gets a column to the right of the student
+        name column which shows the students minutes of attendance and is
+
+    All Students Sheet:
+        All students regardless of whether they ever attended a zoom
+        meeting with an ov
+        Each group gets its own sheet for its attendance.
+
+    Highlights Sheet(s):
+        Gives some helpful highlights:
+            - Students in the top and bottom 10th percentile of attendance
+                across all groups.
+            - Group with the best & worst attendance (this is only measured
+                against the historical max attendance for that group, since
+                the total size of the group is unknown)
+            - Students whose name could not be matched. Some students use
+                weird names. This program ignores those students if they
+                are truly unidentifiable, but they get dumped onto the
+                highlight sheet so you can at least see how many anonymous
+                students there are, and what names they are using.
+    """
+
+
+    def __init__(self, meeting_set: MeetingSet, *a, **kw):
+        super().__init__()
+        self.meeting_set = meeting_set
+        self.thresholds = kw.get('attendance_duration_thresholds')
+        # init workbook
+        self.workbook = Workbook()
+        self.workbook.remove(self.workbook.active)
+        self.styles = {
+            'h1': Font(size=30, bold=True, name='Cambria'),
+            'h2': Font(size=16, name='Calibri')
+        }
+
+    def generate_report(self) -> Workbook:
         """
-        Master Sheet:
-            The master sheet contains a summary of all data in one place.
-            The attendance log for each group is laid out from top to bottom.
-
-        Group Sheets:
-            Each group gets its own sheet for its attendance.
-
-        Highlights Sheet(s):
-            Gives some helpful highlights:
-                - Students in the top and bottom 10th percentile of attendance
-                    across all groups.
-                - Group with the best & worst attendance (this is only measured
-                    against the historical max attendance for that group, since
-                    the total size of the group is unknown)
-                - Students whose name could not be matched. Some students use
-                    weird names. This program ignores those students if they
-                    are truly unidentifiable, but they get dumped onto the
-                    highlight sheet so you can at least see how many anonymous
-                    students there are, and what names they are using.
+        Call funcs below to generate each sheet, then return the workbook.
         """
-        # master sheet
-        master_sheet = self.WB_OUT.create_sheet(title="Master Sheet")
-        self.write_master_sheet(master_sheet)
-        self.save_workbook(destination)
+        # main sheet
+        main_sheet = self.workbook.create_sheet(title="Main Sheet")
+        self.write_main_sheet_key_with_dynamic_colors(main_sheet)
+        START_ROW = 7  # because of the stuff written first by the fucn below.
+        writer = MainSheetWriter(
+            self.meeting_set,
+            main_sheet,
+            start_row=START_ROW
+        )
+        writer.write_sheet()
+        return self.workbook
 
-    def write_master_sheet(self, master_sheet):
-        master_sheet.page_setup.fitToWidth = 1
+    def write_main_sheet_key_with_dynamic_colors(self, sheet):
+        """
+        This is kind of graveyard code because I gave up on drilling down
+        dynamically assigned colors. But, I'm preserving it because it might
+        be re-added in the future.
+
+        Note that this writes the main sheet up to row 4 (1-based index)
+        """
+        sheet.page_setup.fitToWidth = 1
         # header information
-        a1 = master_sheet['A1']
+        a1 = sheet['A1']
         a1.value = 'Zoom Attendance Report'
         a1.font = self.styles['h1']
-        b1 = master_sheet['A2']
+        b1 = sheet['A2']
         b1.value = 'Key'
         b1.font = self.styles['h2']
 
         # fill in key
-        b2, c2 = master_sheet['A3':'B3'][0]
-        b2.fill = self.fills['green']
+        b2, c2 = sheet['A3':'B3'][0]
+        b2.fill = self.colors['green']
         c2.value = (
-            f'Green: Student attended for at least {self.thresholds["green"]} '
-            'minutes.'
+            f'Green: Student attended for at least {self._30_MIN_GREEN} '
+            f'minutes before 10/4/2020, or {self._45_MIN_GREEN} after '
+            '10/4/2020.'
         )
-        b3, c3 = master_sheet['A4':'B4'][0]
-        b3.fill = self.fills['yellow']
+        b3, c3 = sheet['A4':'B4'][0]
+        b3.fill = self.colors['yellow']
         c3.value = (
-            f'Yellow: Student attended for at least {self.thresholds["yellow"]} '
-            'minutes.'
+            f'Yellow: Student attended for at least {self._30_MIN_YELLOW} '
+            f'minutes before 10/4/2020, or {self._45_MIN_GREEN} after '
+            '10/4/2020.'
         )
-        b4, c4 = master_sheet['A5':'B5'][0]
-        b4.fill = self.fills['red']
+        b4, c4 = sheet['A5':'B5'][0]
+        b4.fill = self.colors['red']
         c4.value = (
-            f'Red: Student attended for at least {self.thresholds["red"]} '
-            'minutes.'
+            'Red: Student attended for less than {self._30_MIN_YELLOW} before '
+            f' 10/4/2020, or {self._45_MIN_YELLOW} after 10/4/2020.'
         )
 
-        breakpoint()
-        if self.meetings.group_dict:
-            for meeting_set_name, meetings in self.meetings.group_dict.items():
-                self.write_group_dict_item(
-                    meeting_set_name, meetings, master_sheet, 'A6')
+class MainSheetWriter(DynamicDateColorer, HelperConsumer):
+    """
+    Note that this class does not support dynamic coloring, it uses the
+    constants defined in ExcelStyles above.
+    """
+    def __init__(self, meeting_set: MeetingSet, sheet, start_row=0):
+        super().__init__()
+        self.sheet = sheet
+        self.sheet.title = 'Main'
+        self.groups = meeting_set.groups
 
-    @staticmethod
-    def write_group_dict_item(
-        meeting_name: str,
-        meeting: MeetingSet,
-        worksheet,
-        starting_cell: str
-    ):
-        """
-        Returns the first empty row (int) after the block it wrote.
-        """
-        # make sure we aren't in a column past z
-        try:
-            assert len(starting_cell) == 2
-            assert starting_cell[1:].isnumerical()
-            assert ord(starting_cell[0].upper()) < 90
-        except AssertionError:
-            raise Exception("This function can not write to columns past Z")
-        # get cell range to iterate over
-        min_col = starting_cell[0].upper()
-        row = int(starting_cell[1:])
-        # TODO finish this method
-        raise NotImplementedError('Need to finish this method')
+        self.cur_meeting = None
+        self.cur_row = start_row
+        self.cur_group = []
+        self.cur_group_students = []
+        self.cur_headers = []
 
-    def save_workbook(self, path: Path):
-        self.WB_OUT.save(path.resolve())
+        # map of meeting header strings to their timestamp, for later.
+        self.name_to_timestamp_map = {
+            m.__str__() : m.datetime.timestamp() for m in meeting_set.meetings
+        } 
+    def write_sheet(self):
+        """
+        Orchestrate private functions below.
+        """
+        for group in self.groups:
+            self.cur_group = group
+
+            # get all students from the group
+            students = set()
+            for meeting in group:
+                meet_students = set(meeting.attendees)
+                students.update(meet_students)
+            self.cur_group_students = students
+
+            self._write_group_headers()
+            self._write_rows()
+            self.cur_row += 2  # leave 2 blank rows between groups
+
+    def _write_group_headers(self):
+        """
+        For each group, write a row of headers that describe each meeting the
+        group had.
+        """
+        group_topics = ' ,'.join( topic_set := {t.topic for t in self.cur_group})
+        temp = self.sheet.cell(row=self.cur_row, column=1)
+        s = 's' if len(topic_set) > 1 else '' # plurality
+        temp.value = 'Dynamic Group'
+        temp.font = Font(size=32, bold=True)
+
+        self.cur_row += 1
+
+        temp = self.sheet.cell(row=self.cur_row, column=1)
+        temp.value = f'Group contains meet topic{s}: {group_topics}'
+        temp.font = Font(size=24, italic=True)
+
+        self.cur_row += 1
+
+        # write the last header row: column labels
+        self.cur_group.sort(key=lambda m: m.datetime)
+        self.cur_headers = [m.__str__() for m in self.cur_group]
+        write_headers = ['Last Name', 'First Name'] + self.cur_headers
+        for i, topic in enumerate(write_headers):
+            i += 1  # 1-based index for openpyxl
+            cell = self.sheet.cell(row=self.cur_row, column=i)
+            cell.value = topic.title()
+            cell.font = Font(bold=True)
+        self.cur_row += 1
+
+    def _write_rows(self):
+        """
+        Write row for each student.
+        """
+        for student in self.cur_group_students:
+            # write student name
+            last_name_cell = self.sheet.cell(row=self.cur_row, column=1)
+            last_name_cell.value = student.last_name
+            first_name_cell = self.sheet.cell(row=self.cur_row, column=2)
+            first_name_cell.value = student.first_name
+
+            # iterate over headers to fill in row
+            for i, header in enumerate(self.cur_headers):
+
+                # select cell
+                i += 3  # offset for first and last name
+                cell = self.sheet.cell(row=self.cur_row, column=i)
+
+                # select value
+                mins_attended = student.zoom_attendance_record.get(header)
+                if not mins_attended:
+                    mins_attended = 0
+
+                # assign value to cell
+                cell.value = mins_attended
+
+                # color cell
+                cell.fill = self.get_color(
+                    mins_attended,
+                    self.name_to_timestamp_map[header]
+                )
+            self.cur_row += 1

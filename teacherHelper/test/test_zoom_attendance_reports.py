@@ -1,53 +1,24 @@
+import json
 from pathlib import Path
+import unittest
 
 from pytest import fixture
 
-from ..zoom_attendance_report import MeetingSet
+from ..zoom_attendance_report import MeetingSet, ExcelWriter
+from ..helper import Helper
 
 
-@fixture
-def trusted_topics_groups():
-    fixture_dir = Path(
-        Path(__file__).parents[2],  # repository base directory
-        'data',
-        'test_fixtures',
-        'zoom_attendance_reports',
-        'trust_topics',
-    )
-    report = MeetingSet(
-        fixture_dir,
-        trust_topics=True
-    )
-    report.process()
-    return report
+class TestMeetingSet(unittest.TestCase):
+    """
+    This is ultimately more of a regression test because it uses real data 
+    """
+    def setUp(self):
+        self.helper = Helper.read_cache()   # poor test independence;
+                                            # also requires testing w/ real
+                                            # data
+        with open('sample_data_secret.json', 'r') as jsn:
+            self.data = json.load(jsn)
+
+    def test_meeting_(self):
 
 
-@fixture
-def untrusted_topics_groups():
-    fixture_dir = Path(
-        Path(__file__).parents[2],  # repository base directory
-        'data',
-        'test_fixtures',
-        'zoom_attendance_reports',
-        'untrust_topics',
-    )
-    report = MeetingSet(
-        fixture_dir,
-        trust_topics=True
-    )
-    report.process()
-    return report
-
-
-def test_untrusted_topics_grouping(untrusted_topics_groups):
-    report = untrusted_topics_groups
-    for group in report.groups:
-        group_topic = group[0].topic
-        for meeting in group:
-            print(group_topic)
-            print(meeting.topic)
-            assert meeting.topic == group_topic
-
-
-def test_trusted_topics_grouping(trusted_topics_groups):
-    gr = trusted_topics_groups
