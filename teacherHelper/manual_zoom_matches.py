@@ -3,6 +3,7 @@ def MANUAL_FIXES(name):
     Manual fixes for individual students. This is in the gitignore because
     it contains individual names
     """
+    name = name.lower()
     zoom_name_to_government_name = {
         'layla j': 'Layla Johnson',
         'derek r.': 'Derek Yu',

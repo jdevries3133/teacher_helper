@@ -5,7 +5,6 @@ from pathlib import Path
 from .email_ import Email
 from .helper import Helper
 from .student import Student
-from .zoom_attendance_report import MeetingSet, ExcelWriter
 
 
 REQUIRED_VARS = [

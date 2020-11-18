@@ -1,5 +1,5 @@
+from copy import copy
 from datetime import datetime
-from pathlib import Path
 import logging
 import string
 import re
@@ -22,6 +22,8 @@ except ImportError:
 
 
 from .helper import Helper
+
+logger = logging.getLogger(__name__)
 
 
 class HelperConsumer:
@@ -138,25 +140,47 @@ class Meeting(HelperConsumer):
         if 'pm' in time_str.lower():
             hour += 12
         self.datetime = datetime(year, month, day, hour, minute)
+
+        # first pass; get the easy matches, determine the homeroom and grade
+        # level if possible
+
+        # first pass; get the easy matches, determine the homeroom and grade
+        # level if possible
         grade_levels_within = set()
         homerooms_within = set()
+        matched = []  # cached matched, skip on second pass
         for row in rows[4:]:
-            duration = row[2]
-            st = self.match_student(row[0])
+            st = self.helper.find_nearest_match(row[0], auto_yes=True)
             if not st:
-                self.unidentifiable.append(row[0])
                 continue
+            st.zoom_attendance_report.setdefault(
+                self.__str__(),
+                int(row[2])  # duration of attendance
+            )
+            matched.append(row[0])
             grade_levels_within.add(st.grade_level)
             homerooms_within.add(st.homeroom)
-            st.zoom_attendance_record.setdefault(
-                (self.__str__()),
-                int(duration)
-            )
-            self.attendees.append(st)
+
+        # if the members of the group are all in a single homeroom or grade
+        # level, we can narrow our search later.
         if len(grade_levels_within) <= 1:
             self.grade_level = grade_levels_within.pop()
         if len(homerooms_within) <= 1:
             self.homeroom = homerooms_within.pop()
+
+        # second pass, use grade level knowledge to match difficult students.
+        for row in rows[4:]:
+            if row[0] in matched:
+                continue
+            st = self.match_student(row[0])
+            if not st:
+                self.unidentifiable.append(row[0])
+                continue
+            st.zoom_attendance_record.setdefault(
+                self.__str__(),
+                int(row[2])  # duration of attendance
+            )
+            self.attendees.append(st)
 
     def match_student(self, name):
         """
@@ -177,18 +201,26 @@ class Meeting(HelperConsumer):
         # popular emoticon character
         name.replace('ω', '')
         try:
-            return self.helper.find_nearest_match(name, auto_yes=True)
+            # use helper search, which can raise warnings
+            st = self.helper.find_nearest_match(name, auto_yes=True)
+            if st:
+                return st
         except Warning:
             pass
-        st = self.try_matching_student_within_grade(name)
+        # search whole name wthin subgroup
+        st = self.try_matching_student_within_subgroup(name)
         if st:
             return st
-        for part in [i for i in re.split(' |.', name) if i]:
+        for part in [i for i in re.split(r'[ |.]', name) if i]:
+            # search each word in name within subgroup
             st = self.try_matching_student_within_subgroup(part)
             if st:
                 return st
+            st = self.try_matching_student_within_subgroup(
+                part, last_name=True)
+            return st
 
-    def try_matching_student_within_subgroup(self, student_name):
+    def try_matching_student_within_subgroup(self, student_name, last_name=False):
         """
         Unlike in the self.helper student matching function, this class is aware of
         the grade level of the student it is trying to match. If the self.helper
@@ -202,14 +234,15 @@ class Meeting(HelperConsumer):
             compare_attr = 'grade_level'
         else:
             return  # no subgroup to compare within
-
+        name_part = 'last_name' if last_name else 'first_name'
+        qs = [
+            s.__dict__[name_part] for s in self.helper.students.values()
+            if s.__dict__[compare_attr] == self.__dict__[compare_attr]
+        ]
         first_name_match = process.extract(
             student_name,
-            [
-                s.first_name for s in self.helper.students.values()
-                if s.__dict__[compare_attr] == self.__dict__[compare_attr]
-            ],
-            limit=3
+            qs,
+            limit=2
         )
         if first_name_match[0][1] > 90:
             # we have a potential match! Let's see if it's truly a match
@@ -219,7 +252,7 @@ class Meeting(HelperConsumer):
             # students in the grade level with that name. It is therefore
             # impossible to perform a perfect match against only the first name
             if first_name_match[1][0] == first_name_match[0][0]:
-                logging.debug(
+                logger.debug(
                     f'Cannot proceed with {student_name}. More than one '
                     f'student in the {self.grade_level}th grade has the first '
                     f'name {first_name_match[0][0]}.'
@@ -252,7 +285,7 @@ class MeetingSet(HelperConsumer):
 
     Meeting groupings will be accessible as a nested list (self.groups).
     Each item in the list will itself be a chronologically sorted list of
-    Meeting instances. 
+    Meeting instances.
 
     The presumption is that there is no reliable way to know the full name of
     a meeting. For example, the meeting topic might be, "Health," but whoose
@@ -279,6 +312,10 @@ class MeetingSet(HelperConsumer):
         self.groups = []
         self.meetings = []  # all meetings in a flattened list
         self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.8
+
+        # init dict on student objects
+        for st in self.helper.students.values():
+            st.zoom_attendance_report = {}
 
     def process(self):
         """
@@ -331,7 +368,7 @@ class MeetingSet(HelperConsumer):
         return []
 
 
-class DynamicDateColorer:  # TODO test that this is working right.
+class DynamicDateColorer:
     """
     Class meetings after October 4, 2020 changed from 30 to 45 minutes.
     Hence, the coloring of cells needs to be responsive.
@@ -377,8 +414,15 @@ class DynamicDateColorer:  # TODO test that this is working right.
             return self.colors.get('yellow')
         return self.colors.get('red')
 
+    def get_color_avg(self, duration):
+        if duration > 30:
+            return self.colors.get('green')
+        if duration > 15:
+            return self.colors.get('yellow')
+        return self.colors.get('red')
 
-class ExcelWriter(DynamicDateColorer):
+
+class WorkbookWriter(DynamicDateColorer):
     """
     Writes a MeetingSet into an excel report
 
@@ -418,21 +462,21 @@ class ExcelWriter(DynamicDateColorer):
             'h1': Font(size=30, bold=True, name='Cambria'),
             'h2': Font(size=16, name='Calibri')
         }
+        self.sheet_writer_classes = [
+            MainSheetWriter,
+            ListByHomeroomSheetWriter,
+            HighlightSheetWriter
+        ]
 
     def generate_report(self) -> Workbook:
         """
         Call funcs below to generate each sheet, then return the workbook.
         """
-        # main sheet
-        main_sheet = self.workbook.create_sheet(title="Main Sheet")
-        self.write_main_sheet_key_with_dynamic_colors(main_sheet)
-        START_ROW = 7  # because of the stuff written first by the fucn below.
-        writer = MainSheetWriter(
-            self.meeting_set,
-            main_sheet,
-            start_row=START_ROW
-        )
-        writer.write_sheet()
+        # write sheets
+        for SheetWriter in self.sheet_writer_classes:
+            wr = SheetWriter(self.meeting_set, self.workbook.create_sheet())
+            wr.write_sheet()
+
         return self.workbook
 
     def write_main_sheet_key_with_dynamic_colors(self, sheet):
@@ -475,27 +519,59 @@ class ExcelWriter(DynamicDateColorer):
         )
 
 
-class MainSheetWriter(DynamicDateColorer, HelperConsumer):
+class BaseSheetWriter(DynamicDateColorer):
+    def __init__(
+            self,
+            meeting_set: MeetingSet,
+            sheet,
+            start_row=1,
+            title='Sheet'
+    ):
+        super().__init__()
+        self.meeting_set = meeting_set
+        self.sheet = sheet
+        self.groups = meeting_set.groups
+        self.sheet.title = title
+        self.cur_row = start_row
+
+    def write_sheet(self):
+        """
+        Write data into the sheet provided to init.
+        """
+        raise NotImplementedError
+
+    def write_cell(self, *,
+                   value: str, row=None, col: int, font=None, fill=None
+                   ):
+        """
+        Utility for writing to a single cell with styles. Does not incremenet
+        self.cur_row.
+        """
+        row = row if row else self.cur_row          # override default row value
+        cell = self.sheet.cell(row=row, column=col)  # select column
+        cell.value = value                          # write value
+        if font:                                    # set font
+            cell.font = font
+        if fill:                                    # set fill
+            cell.fill = fill
+
+
+class MainSheetWriter(BaseSheetWriter):
     """
     Note that this class does not support dynamic coloring, it uses the
     constants defined in ExcelStyles above.
     """
 
-    def __init__(self, meeting_set: MeetingSet, sheet, start_row=0):
-        super().__init__()
-        self.sheet = sheet
-        self.sheet.title = 'Main'
-        self.groups = meeting_set.groups
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw, title='Main')
 
-        self.cur_meeting = None
-        self.cur_row = start_row
         self.cur_group = []
         self.cur_group_students = []
         self.cur_headers = []
 
         # map of meeting header strings to their timestamp, for later.
         self.name_to_timestamp_map = {
-            m.__str__(): m.datetime.timestamp() for m in meeting_set.meetings
+            m.__str__(): m.datetime.timestamp() for m in self.meeting_set.meetings
         }
 
     def write_sheet(self):
@@ -557,7 +633,9 @@ class MainSheetWriter(DynamicDateColorer, HelperConsumer):
             # write student name
             last_name_cell = self.sheet.cell(row=self.cur_row, column=1)
             last_name_cell.value = student.last_name
+            last_name_cell.font = Font(size=16)
             first_name_cell = self.sheet.cell(row=self.cur_row, column=2)
+            first_name_cell.font = Font(size=16)
             first_name_cell.value = student.first_name
 
             # iterate over headers to fill in row
@@ -566,6 +644,7 @@ class MainSheetWriter(DynamicDateColorer, HelperConsumer):
                 # select cell
                 i += 3  # offset for first and last name
                 cell = self.sheet.cell(row=self.cur_row, column=i)
+                cell.font = Font(size=16)
 
                 # select value
                 mins_attended = student.zoom_attendance_record.get(header)
@@ -581,3 +660,200 @@ class MainSheetWriter(DynamicDateColorer, HelperConsumer):
                     self.name_to_timestamp_map[header]
                 )
             self.cur_row += 1
+
+
+class ListByHomeroomSheetWriter(BaseSheetWriter, HelperConsumer):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw, title='Attendance Summary by Homeroom')
+
+    def write_sheet(self):
+        self._write_sheet_header()
+        self.cur_row += 2
+        for homeroom in self.helper.homerooms.values():
+            self._write_homeroom_header(homeroom)
+            self.cur_row += 1
+            for student in homeroom.students:
+                self._write_homeroom_student(student)
+                self.cur_row += 1
+            self.cur_row += 2
+
+    def _write_sheet_header(self):
+        """
+        Header for the whole sheet.
+        """
+        # title
+        temp = self.sheet.cell(row=self.cur_row, column=1)
+        temp.value = 'Attendance Summary by Homeroom'
+        temp.font = Font(bold=True, size=32)
+        self.cur_row += 1
+
+        # description
+        temp = self.sheet.cell(row=self.cur_row, column=1)
+        temp.value = (
+            'An overview of all students sorted by homeroom, regardless '
+            'of whether they\'ve ever actually attended your meeting.'
+        )
+        self.cur_row += 1
+
+        # key
+        temp = self.sheet.cell(row=self.cur_row, column=1)
+        temp.value = 'Key'
+        temp.font = Font(size=24)
+        self.cur_row += 1
+
+        # key rationale
+        temp = self.sheet.cell(row=self.cur_row, column=1)
+        temp.value = (
+            'We spent 4 weeks @ 30min / wk, and 6 weeks at 45 min / wk so '
+            'far. With that in mind, we would expect the perfect student '
+            'to have an average meeting attendance duration of 39 minutes. '
+            'bearing that in mind...'
+
+        )
+        self.cur_row += 1
+
+        # key__green
+        temp_color = self.sheet.cell(row=self.cur_row, column=1)
+        temp_color.fill = self.colors['green']
+        temp_label = self.sheet.cell(row=self.cur_row, column=2)
+        temp_label.value = (
+            'Average attendance duration is greater than 30 minutes.'
+        )
+        self.cur_row += 1
+
+        # key__yellow
+        temp_color = self.sheet.cell(row=self.cur_row, column=1)
+        temp_color.fill = self.colors['yellow']
+        temp_label = self.sheet.cell(row=self.cur_row, column=2)
+        temp_label.value = (
+            'Average attendance duration is greater than 15 minutes.'
+        )
+        self.cur_row += 1
+
+        # key__red
+        temp_color = self.sheet.cell(row=self.cur_row, column=1)
+        temp_color.fill = self.colors['red']
+        temp_label = self.sheet.cell(row=self.cur_row, column=2)
+        temp_label.value = (
+            'Average attendance duration is less than 15 minutes.'
+        )
+        self.cur_row += 1
+
+    def _write_homeroom_header(self, homeroom):
+        """
+        Header for each homeroom.
+        """
+        temp = self.sheet.cell(row=self.cur_row, column=1)
+        temp.value = homeroom.teacher
+        temp.font = Font(size=20)
+
+        headers = [
+            'Last Name',
+            'First Name',
+            'Average Attendance',
+            'Total Meetings Attended',
+        ]
+        for i, h in enumerate(headers):
+            temp = self.sheet.cell(row=self.cur_row, column=i + 1)
+            temp.value = h
+            temp.font = Font(bold=True, size=16)
+
+    def _write_homeroom_student(self, student):
+        """
+        Write one row, corresponding to one student.
+        """
+        zar = student.__dict__.get('zoom_attendance_record')
+        row = [
+            student.first_name,
+            student.last_name,
+            self._calc_avg_attendance(zar),
+            len(zar) if zar else 0
+        ]
+        color = self.get_color_avg(row[2])
+        for i, val in enumerate(row):
+            temp = self.sheet.cell(row=self.cur_row, column=i + 1)
+            temp.value = val
+            temp.font = Font(size=16)
+            temp.fill = color
+
+    @ staticmethod
+    def _calc_avg_attendance(zoom_attendance_report: dict) -> int:
+        return (
+            (
+                sum(zoom_attendance_report.values())
+                / len(zoom_attendance_report)
+            )
+            if zoom_attendance_report else 0
+        )
+
+
+class HighlightSheetWriter(BaseSheetWriter):
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw, title='Highlights')
+
+    def write_sheet(self):
+        self._write_sheet_header()
+        self._write_missing_students()
+
+    def _write_sheet_header(self):
+        self.write_cell(
+            value='Highlights',
+            col=1,
+            font=Font(size=32, bold=True),
+        )
+        self.cur_row += 2
+
+        self.write_cell(
+            value='Unmatched Names',
+            col=1,
+            font=Font(size=24, bold=True)
+        )
+        self.cur_row += 1
+
+        self.write_cell(
+            value=(
+                'This report is not perfect. As you very well know, many '
+                'students use names in zoom calls that have no relationship '
+                'to their real name. You had an opportunity to manually match '
+                'some of these names back in the web interface, but even a '
+                'human can\'t necessecarily reliably match these names. '
+            ),
+            col=1,
+        )
+        self.cur_row += 1
+
+        self.write_cell(
+            value=(
+                'Nevertheless, the names are stored here for your reference, '
+                'and so that you have a sense of how many students are missing '
+                'from the rest of this report.'
+            ),
+            col=1,
+        )
+        self.cur_row += 1
+
+    def _write_missing_students(self):
+        unidentifiable = set()
+        for group in self.groups:
+            for meeting in group:
+                unidentifiable.update(meeting.unidentifiable)
+        start_block = copy(self.cur_row)
+        cur_col = 1
+        n = len(unidentifiable) // 10
+        for i, name in enumerate(unidentifiable):
+            i += 1
+            # every n rows, move one column over and fill the same row range
+            # again. n is porportional to len(unidentifiable) to make a nice block.
+            if not i % n:
+                cur_col += 1
+                self.cur_row = copy(start_block)
+
+            self.cur_row += 1
+
+            # write name to current cell
+            self.write_cell(
+                row=self.cur_row,
+                col=cur_col,
+                value=name
+            )
