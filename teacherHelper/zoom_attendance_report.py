@@ -338,6 +338,18 @@ class MeetingSet(HelperConsumer):
     different zoom meet topics, that case could probably be dealt with in a
     more flexible subclass which modifies the "match_meeting_with_group_by_union"
     method.
+
+    # What is self.TOTAL_TO_UNION_RATIO_ADJUSTMENT?
+
+    In a perfect world with perfect attendance, the union between like groups
+    will be half of the total number of attendees when comparing two meeting
+    instances. In a garbage world where barely anyone consistently attends,
+    we would at least expect the union between like groups to be less than
+    the total.
+
+    By knocking the total down by 15%, we can find a middle ground. It
+    basically allows us to say, "if most of the students from this meeting are
+    the same as the ones from the past meeting, then it's a match."
     """
 
     # TODO implement a cache layer for name matches so processing doesn't take so long.
@@ -347,7 +359,7 @@ class MeetingSet(HelperConsumer):
         self.csv_strings = csv_strings
         self.groups = []
         self.meetings = []  # all meetings in a flattened list
-        self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.8
+        self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.9
         self.is_processed = False
 
         # init dict on student objects
@@ -399,12 +411,23 @@ class MeetingSet(HelperConsumer):
             m__attendees = {s.name for s in meeting.attendees}
             union = len(cm__attendees | m__attendees)
             total = len(cm__attendees) + len(m__attendees)
+            total *= self.TOTAL_TO_UNION_RATIO_ADJUSTMENT
+            is_matched = total > union
 
             # TODO fix this matching system. It fails when the unique topic constraint is removed, which is very bad.
             # MATCH CRITERIA
-            matched = total > union and closest_meeting.topic == meeting.topic
-            if matched:
-                logger.debug(matched)
+            logger.info('----------- BEGIN GROUP MATCH -----------')
+            logger.info(f'Total: {total}')
+            logger.info(f'Union: {union}')
+            logger.info(f'Closest Meeting: {closest_meeting}')
+            logger.info(f'Current Meeting: {meeting}')
+            logger.info(f'Is Matched: {is_matched}')
+            logger.debug('cm__attendees')
+            logger.debug(cm__attendees)
+            logger.debug('m__attendees')
+            logger.debug(m__attendees)
+            logger.info('----------- END GROUP MATCH -----------')
+            if is_matched:
                 return group
         return []
 
@@ -587,7 +610,7 @@ class WorkbookWriter:
         # sheet writer classes do the heavy lifting.
         self.sheet_writer_classes = [
             MainSheetWriter,
-            ListByHomeroomSheetWriter,
+            HomeroomSummaryWriter,
             HighlightSheetWriter,
             RawDataWriter
         ]
@@ -798,24 +821,37 @@ class MainSheetWriter(BaseSheetWriter):
             self.cur_row += 1
 
 
-class ListByHomeroomSheetWriter(BaseSheetWriter, HelperConsumer):
+class HomeroomSummaryWriter(BaseSheetWriter, HelperConsumer):
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw, title='Attendance Summary by Homeroom')
 
     def write_sheet(self):
         self._write_sheet_header()
         self.cur_row += 2
-        homeroom_names = list(self.helper.homerooms.keys())
-        homeroom_names.sort()
-        for name in homeroom_names:
+
+        # for each homeroom, sorted by grade and teacher name
+        for grade_level, name in self._homeroom_tuples():
             homeroom = self.helper.homerooms[name]
             self._write_homeroom_header(homeroom)
             self.cur_row += 1
+
+            # for each student, sorted by last name
             homeroom.students.sort(key=lambda s: s.last_name)
             for student in homeroom.students:
                 self._write_homeroom_student(student)
                 self.cur_row += 1
             self.cur_row += 2
+
+    def _homeroom_tuples(self):
+        """
+        Return tuples for each homeroom, sorted primarily
+        by homeroom grade and secondarily by homeroom teacher name.
+        """
+        tuples = [
+            (h.grade_level, k) for k, h in self.helper.homerooms.items()
+        ]
+        tuples.sort()
+        return tuples
 
     def _write_sheet_header(self):
         """
@@ -916,7 +952,7 @@ class ListByHomeroomSheetWriter(BaseSheetWriter, HelperConsumer):
         Header for each homeroom.
         """
         temp = self.sheet.cell(row=self.cur_row, column=1)
-        temp.value = homeroom.teacher
+        temp.value = f'{homeroom.teacher}, Grade {homeroom.grade_level}'
         temp.font = Font(size=20)
         self.cur_row += 1
 
