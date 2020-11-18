@@ -26,6 +26,13 @@ from .helper import Helper
 logger = logging.getLogger(__name__)
 
 
+class ZoomReportFormatIncorrect(Exception):
+    """
+    Raised by Meeting when the user apparently didn't check the boxes they
+    needed to check when generating the report.
+    """
+
+
 class HelperConsumer:
     helper = Helper.read_cache()
 
@@ -45,14 +52,15 @@ class Meeting(HelperConsumer):
     def __init__(self, csv_string: str):
         super().__init__()
         self.csv_string = csv_string
-        self.attendees = []
-        self.unidentifiable = []
-        self.datetime = None
-        self.duration = None
-        self.topic = None
-        self.total_participants = None
-        self.grade_level = None
-        self.homeroom = None
+
+        self.average_len_attendance = None  # int
+        self.attendees = []         # list[helper.Student]
+        self.unidentifiable = []    # list[str]
+        self.datetime = None        # datetime.datetime
+        self.topic = None           # str
+        self.grade_level = None     # int
+        self.homeroom = None        # str
+        self.rows = []              # raw rows  list[str]
         self.read_report()
 
     def __repr__(self):
@@ -107,10 +115,21 @@ class Meeting(HelperConsumer):
         self.grade_level
         self.datetime
         """
-        rows = []
+        self._process_csv()
+
+    def _process_csv(self):
+        self._check_zoom_report_format()
+        self._parse_csv()
+
+    def _check_zoom_report_format(self):
+        """
+        Ensure that the user checked the boxes they needed to to check while
+        generating the CSV
+        """
+        self.rows = []
         for line in self.csv_string.split('\n')[:-1]:
             line = line.strip()
-            rows.append(line.split(','))
+            self.rows.append(line.split(','))
         # raise an exception if row 2 is not blank.
         # tolerate the case of row[2] = ['', '', '', ...]
         exception_message = (
@@ -118,17 +137,24 @@ class Meeting(HelperConsumer):
             f'{self.topic} at {self.datetime} does not appear to contain '
             'meeting information.'
         )
-        if rows[2]:
-            rw = set(rows[2])
-            if len(rw) <= 1:
-                if rw.pop():
-                    raise Exception(exception_message)
+        if self.rows[2]:
+            row_set = set(self.rows[2])  # this line should be blank
+            if len(row_set) <= 1:
+                if row_set.pop():
+                    raise ZoomReportFormatIncorrect(exception_message)
             else:
-                raise Exception(exception_message)
-        # parse the CSV, having cleared the exception check
-        self.duration = int(rows[1][5])
-        self.topic = rows[1][1]
-        time_str = rows[1][2]
+                raise ZoomReportFormatIncorrect(exception_message)
+
+    def _parse_csv(self):
+        """
+        Assuming that it's structure has been validated.
+        """
+        self._parse_csv_header()
+        self._parse_csv_body()
+
+    def _parse_csv_header(self):
+        self.topic = self.rows[1][1]
+        time_str = self.rows[1][2]
         (
             month,
             day,
@@ -141,15 +167,17 @@ class Meeting(HelperConsumer):
             hour += 12
         self.datetime = datetime(year, month, day, hour, minute)
 
-        # first pass; get the easy matches, determine the homeroom and grade
-        # level if possible
-
-        # first pass; get the easy matches, determine the homeroom and grade
-        # level if possible
+    def _parse_csv_body(self):
+        """
+        Make two passes over the data. Once for the easy-to-match students,
+        and again using data gained from the easy to match students to narrow
+        field of search for the hard to match ones.
+        """
+        # FIRST PASS
         grade_levels_within = set()
         homerooms_within = set()
         matched = []  # cached matched, skip on second pass
-        for row in rows[4:]:
+        for row in self.rows[4:]:
             st = self.helper.find_nearest_match(row[0], auto_yes=True)
             if not st:
                 continue
@@ -161,15 +189,14 @@ class Meeting(HelperConsumer):
             grade_levels_within.add(st.grade_level)
             homerooms_within.add(st.homeroom)
 
-        # if the members of the group are all in a single homeroom or grade
-        # level, we can narrow our search later.
+        # we may have determined grade level or homerooms, thus narrowin the search
         if len(grade_levels_within) <= 1:
             self.grade_level = grade_levels_within.pop()
         if len(homerooms_within) <= 1:
             self.homeroom = homerooms_within.pop()
 
-        # second pass, use grade level knowledge to match difficult students.
-        for row in rows[4:]:
+        # SECOND PASS
+        for row in self.rows[4:]:
             if row[0] in matched:
                 continue
             st = self.match_student(row[0])
@@ -669,9 +696,13 @@ class ListByHomeroomSheetWriter(BaseSheetWriter, HelperConsumer):
     def write_sheet(self):
         self._write_sheet_header()
         self.cur_row += 2
-        for homeroom in self.helper.homerooms.values():
+        homeroom_names = list(self.helper.homerooms.keys())
+        homeroom_names.sort()
+        for name in homeroom_names:
+            homeroom = self.helper.homerooms[name]
             self._write_homeroom_header(homeroom)
             self.cur_row += 1
+            homeroom.students.sort(key=lambda s: s.last_name)
             for student in homeroom.students:
                 self._write_homeroom_student(student)
                 self.cur_row += 1
@@ -746,6 +777,7 @@ class ListByHomeroomSheetWriter(BaseSheetWriter, HelperConsumer):
         temp = self.sheet.cell(row=self.cur_row, column=1)
         temp.value = homeroom.teacher
         temp.font = Font(size=20)
+        self.cur_row += 1
 
         headers = [
             'Last Name',
@@ -764,8 +796,8 @@ class ListByHomeroomSheetWriter(BaseSheetWriter, HelperConsumer):
         """
         zar = student.__dict__.get('zoom_attendance_record')
         row = [
-            student.first_name,
             student.last_name,
+            student.first_name,
             self._calc_avg_attendance(zar),
             len(zar) if zar else 0
         ]
@@ -795,6 +827,7 @@ class HighlightSheetWriter(BaseSheetWriter):
     def write_sheet(self):
         self._write_sheet_header()
         self._write_missing_students()
+        self._make_net_averages_over_time_chart()
 
     def _write_sheet_header(self):
         self.write_cell(
@@ -857,3 +890,9 @@ class HighlightSheetWriter(BaseSheetWriter):
                 col=cur_col,
                 value=name
             )
+
+    def _make_net_averages_over_time_chart(self):
+        # structure data. We need a total average attendance for each day there was a meeting.
+        data_points = []
+        for meeting in self.meeting_set.meetings:
+            breakpoint()
