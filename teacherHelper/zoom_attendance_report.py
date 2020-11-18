@@ -492,7 +492,8 @@ class WorkbookWriter(DynamicDateColorer):
         self.sheet_writer_classes = [
             MainSheetWriter,
             ListByHomeroomSheetWriter,
-            HighlightSheetWriter
+            HighlightSheetWriter,
+            RawDataWriter
         ]
 
     def generate_report(self) -> Workbook:
@@ -743,12 +744,44 @@ class ListByHomeroomSheetWriter(BaseSheetWriter, HelperConsumer):
         )
         self.cur_row += 1
 
+        self.write_cell(
+            col=1,
+            value=(
+                'NOTE: because different teachers have different numbers of '
+                'total meetings or meetings per week, I cannot meaningfully '
+                'color the cells here based on number of meetings attended.'
+            ),
+            font=Font(size=14, italic=True, bold=True)
+        )
+        self.cur_row += 1
+
+        self.write_cell(
+            col=1,
+            value=(
+                'Make sure you pay attention to the value there because '
+                'students who attended one meeting for the entire time will '
+                'be green.'
+            ),
+            font=Font(size=14, italic=True, bold=True)
+        )
+        self.cur_row += 1
+
+        self.write_cell(
+            col=1,
+            value=(
+                'Look to the main sheet for more detailed meeting-by-meeting '
+                'data'
+            ),
+            font=Font(size=14, italic=True, bold=True)
+        )
+        self.cur_row += 1
+
         # key__green
         temp_color = self.sheet.cell(row=self.cur_row, column=1)
         temp_color.fill = self.colors['green']
         temp_label = self.sheet.cell(row=self.cur_row, column=2)
         temp_label.value = (
-            'Average attendance duration is greater than 30 minutes.'
+            'Average attendance duration is greater than 30 minutes,'
         )
         self.cur_row += 1
 
@@ -827,7 +860,6 @@ class HighlightSheetWriter(BaseSheetWriter):
     def write_sheet(self):
         self._write_sheet_header()
         self._write_missing_students()
-        self._make_net_averages_over_time_chart()
 
     def _write_sheet_header(self):
         self.write_cell(
@@ -891,8 +923,53 @@ class HighlightSheetWriter(BaseSheetWriter):
                 value=name
             )
 
-    def _make_net_averages_over_time_chart(self):
-        # structure data. We need a total average attendance for each day there was a meeting.
-        data_points = []
+
+class RawDataWriter(BaseSheetWriter):
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.sheet.title = 'Raw Data'
+        self.name_to_meeting = {
+            m.__str__(): m for m in self.meeting_set.meetings
+        }
+
+    def write_sheet(self):
+        self._write_headers()
+        self._write_data()
+
+    def _write_headers(self):
+        headers = [
+            'last name',
+            'first name',
+            'student homeroom',
+            'meeting topic',
+            'meeting date',
+            'meeting time',
+            'attendance duration',
+        ]
+        for i, header in enumerate(headers):
+            self.write_cell(
+                col=i + 1,
+                value=(header.title())
+            )
+        self.cur_row += 1
+
+    def _write_data(self):
         for meeting in self.meeting_set.meetings:
-            breakpoint()
+            for st in meeting.attendees:
+                for k, v in st.zoom_attendance_record.items():
+                    meeting = self.name_to_meeting[k]
+                    data = [
+                        st.last_name,
+                        st.first_name,
+                        st.homeroom,
+                        meeting.topic,
+                        str(meeting.datetime.date()),
+                        meeting.datetime.strftime('%H %M'),
+                        v
+                    ]
+                    for i, d in enumerate(data):
+                        self.write_cell(
+                            col=i + 1,
+                            value=d,
+                        )
+                    self.cur_row += 1
