@@ -378,7 +378,7 @@ class MeetingSet(HelperConsumer):
 
         # init dict on student objects
         for st in self.helper.students.values():
-            st.zoom_attendance_report = {}
+            st.__dict__.setdefault('zoom_attendance_report', {})
 
     def process(self):
         """
@@ -464,7 +464,7 @@ class MeetingSet(HelperConsumer):
             for meeting in group:
                 meeting_dict = {
                     'unidentifiable': meeting.unidentifiable,
-                    'attendees__names': [s.name for s in meeting.attendees],
+                    'attendees': [(s.name, s.zoom_attendance_report) for s in meeting.attendees],
                     'datetime': meeting.datetime.isoformat(),
                     'topic': meeting.topic,
                 }
@@ -483,7 +483,20 @@ class MeetingSet(HelperConsumer):
         If retention of raw data across serialization and deserialization, it
         can be easily added in a subclass but for my current purposes, it would
         be a waste.
+
+        VERY DIFFICULT BUG THAT CONFUSED ME FOR A LONG TIME:
+
+        If `cls` is instantiated after Student.zoom_attendance_report are
+        deserialized and assigned to the student class THOSE ATTENDANCE
+        REPORTS ARE ERASED! This happens because `cls.__init__()` initializes
+        the zoom attendance reports on all helper students, thus ERASING
+        all that data.
+
+        I've since changed the __init__ method to be a bit more gentle and
+        check if a zoom_attendance_report is already there just in case, but
+        that was a nasty, nasty bug.
         """
+        self = cls([])
         data = json.loads(jsn)
         groups = []
         all_meetings = []
@@ -498,10 +511,11 @@ class MeetingSet(HelperConsumer):
                 attendees = []
 
                 # students should always match since names have been cleaned.
-                for st_name in meeting_dict['attendees__names']:
-                    st = cls.helper.find_nearest_match(st_name, auto_yes=True)
+                for st_name, st_zar in meeting_dict['attendees']:
+                    st = self.helper.find_nearest_match(st_name, auto_yes=True)
                     if not st:
                         raise Exception('unexpected no st')
+                    st.zoom_attendance_report = st_zar
                     attendees.append(st)
 
                 # reconstruct meeting object
@@ -513,13 +527,13 @@ class MeetingSet(HelperConsumer):
                 meeting.unidentifiable = unidentifiable
                 meeting.attendees = attendees
 
+
                 # make appends to reconstruct MeetingSet later
                 group_meetings.append(meeting)
                 all_meetings.append(meeting)
             groups.append(group_meetings)
 
         # reconstruct MeetingSet
-        self = cls([])
         self.groups = groups
         self.meetings = all_meetings
         return self
