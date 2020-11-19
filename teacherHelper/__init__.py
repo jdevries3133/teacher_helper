@@ -18,9 +18,3 @@ for var in REQUIRED_VARS:
             f'Environment variable {var} is missing, which is necessary for '
             'certain functions within this module.'
         )
-
-logging.basicConfig(
-    format="FILE %(filename)s:FUNC %(funcName)s:LINE %(lineno)s:%(levelname)s:%(message)s",
-    filename=Path(Path(__file__).parent, "helper.log").resolve(),
-    level=logging.DEBUG
-)

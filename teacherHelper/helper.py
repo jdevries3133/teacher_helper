@@ -1,4 +1,5 @@
 import os
+import logging
 import dbm
 import shelve
 from datetime import datetime
@@ -8,6 +9,7 @@ from fuzzywuzzy import process
 from .HelperMixins import OnCourseMixin, SillyMixin
 
 MODULE_DIR = os.path.dirname(__file__)
+logger = logging.getLogger(__name__)
 
 
 class Helper(OnCourseMixin, SillyMixin):
@@ -52,6 +54,7 @@ class Helper(OnCourseMixin, SillyMixin):
             """
         # direct match
         if st := self.students.get(student_name.title()):
+            logger.debug(f'Exact match for {st.name}')
             return st
         closest_name, confidence = process.extractOne(
             student_name,
@@ -67,6 +70,10 @@ class Helper(OnCourseMixin, SillyMixin):
             return self.students[closest_name]
         if res and auto_yes:
             if confidence > threshold:
+                logger.debug(
+                    f'Fuzzy match; {student_name} == {closest_name}::'
+                    f'confidence = {confidence}::threshold = {threshold}'
+                )
                 return self.students[closest_name]
         if not auto_yes:  # provide feedback to user
             print('Student object not found. find_nearest_match will return None')
