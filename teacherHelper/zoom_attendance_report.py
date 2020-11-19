@@ -223,7 +223,7 @@ class Meeting(HelperConsumer):
             if not st:
                 self.unidentifiable.append(row[0])
                 continue
-            logger.info(f'Second pass contextual match {row[0]} == {st.name}')
+            logger.debug(f'Second pass contextual match {row[0]} == {st.name}')
             st.zoom_attendance_report.setdefault(
                 self.__str__(),
                 int(row[2])  # duration of attendance
@@ -396,6 +396,8 @@ class MeetingSet(HelperConsumer):
             else:
                 self.groups.append([meeting])
             yield meeting  # report progress up the callstack.
+        logger.debug('** Dump of students\' attendance reports')
+        logger.debug([(s.name, s.zoom_attendance_report) for s in self.helper.students.values()])
         self.is_processed = True
 
     def match_meeting_with_group_by_union(self, meeting: Meeting):
@@ -633,6 +635,7 @@ class WorkbookWriter:
         """
         # write sheets
         for SheetWriter in self.sheet_writer_classes:
+            logger.info(f'Began writing with SheetWriter class: {SheetWriter}')
             wr = SheetWriter(self.meeting_set, self.workbook.create_sheet())
             wr.write_sheet()
 
@@ -716,6 +719,9 @@ class MainSheetWriter(BaseSheetWriter):
         self._explain_dynamic_groupings()
         self.cur_row += 2
         for group in self.groups:
+
+            logger.info(f'Main sheet writer began writing group:\n{group}')
+
             self.cur_meetings = group
 
             # get all students from the group
@@ -825,6 +831,7 @@ class MainSheetWriter(BaseSheetWriter):
         )
         self.cur_meetings.sort(key=lambda m: m.datetime)
         self.cur_headers = [m.__str__() for m in self.cur_meetings]
+        logger.debug(f'Headers assigned: {self.cur_headers}')
         write_headers = ['Last Name', 'First Name'] + self.cur_headers
         for i, topic in enumerate(write_headers):
             i += 1  # 1-based index for openpyxl
@@ -886,6 +893,8 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
         # for each homeroom, sorted by grade and teacher name
         for homeroom in self._sorted_homerooms():
 
+            logger.info(f'HomeroomSummaryWriter began writing {homeroom.teacher}')
+
             self.cur_homeroom = homeroom
             self.cur_group_students = homeroom.students
 
@@ -894,12 +903,7 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
             homeroom_meeting_set = set()
             for st in homeroom.students:
 
-                ### debug
-                # for m in st.zoom_attendance_report:
-                #     meeting = self.name_to_meeting_map[m]
-                #     if meeting.grade_level != homeroom.grade_level:
-                #         breakpoint()
-
+                logger.debug(f'{st.name} has been to meetings: {st.zoom_attendance_report}')
 
                 # update cur_meetings with all the meetings this student went
                 # to
@@ -911,7 +915,7 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
             self.cur_meetings = [
                 self.name_to_meeting_map[n] for n in homeroom_meeting_set
             ]
-            logger.debug(self.cur_meetings)
+            logger.debug(f'Homeroom\'s meetings before writing: {self.cur_meetings}')
 
             self._write_homeroom_title()
             self._write_group_headers()
