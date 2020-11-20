@@ -798,18 +798,6 @@ class BaseSheetWriter(DynamicDateColorer):
         self.cur_row.
 
         All positional args are captured for clarity. Use keyword args only.
-
-        This pattern is commonly used:
-
-            temp_color = self.sheet.cell(row=self.cur_row, column=1)
-            temp_color.fill = self.colors['green']
-            temp_label = self.sheet.cell(row=self.cur_row, column=2)
-            temp_label.value = (
-                'Average attendance duration is greater than 30 minutes,'
-            )
-            self.cur_row += 1
-
-        TODO: replace it wherever it appears with calls to this func instead.
         """
         row = row if row else self.cur_row          # override default row value
         cell = self.sheet.cell(row=row, column=col)  # select column
@@ -932,17 +920,22 @@ class MainSheetWriter(BaseSheetWriter):
         """
         group_topics = ' ,'.join(
             topic_set := {t.topic for t in self.cur_meetings})
-        temp = self.sheet.cell(row=self.cur_row, column=1)
-        s = 's' if len(topic_set) > 1 else ''  # plurality
-        temp.value = 'Dynamic Group'
-        temp.font = Font(size=32, bold=True)
 
+        s = 's' if len(topic_set) > 1 else ''  # plurality
+        self.write_cell(
+            col=1,
+            value=f'Dynamic Group{s}',
+            font=Font(size=32, bold=True)
+        )
         self.cur_row += 1
 
-        temp = self.sheet.cell(row=self.cur_row, column=1)
-        temp.value = f'Group contains meet topic{s}: {group_topics}'
-        temp.font = Font(size=24, italic=True)
-
+        self.write_cell(
+            col=1,
+            value=(
+                f'Group contains meet topic{s}: {group_topics}'
+            ),
+            font=Font(size=24, italic=True)
+        )
         self.cur_row += 1
 
     def _write_group_headers(self):
@@ -962,9 +955,11 @@ class MainSheetWriter(BaseSheetWriter):
         write_headers = ['Last Name', 'First Name'] + self.cur_headers
         for i, topic in enumerate(write_headers):
             i += 1  # 1-based index for openpyxl
-            cell = self.sheet.cell(row=self.cur_row, column=i)
-            cell.value = topic.title()
-            cell.font = Font(bold=True)
+            self.write_cell(
+                col=i,
+                value=topic,
+                font=Font(bold=True)
+            )
         self.cur_row += 1
 
     def _write_rows(self):
@@ -974,34 +969,33 @@ class MainSheetWriter(BaseSheetWriter):
         students = list(self.cur_group_students)
         students.sort(key=lambda s: s.last_name)
         for student in students:
+
             # write student name
-            last_name_cell = self.sheet.cell(row=self.cur_row, column=1)
-            last_name_cell.value = student.last_name
-            last_name_cell.font = Font(size=16)
-            first_name_cell = self.sheet.cell(row=self.cur_row, column=2)
-            first_name_cell.font = Font(size=16)
-            first_name_cell.value = student.first_name
+            for i, name in enumerate([student.last_name, student.first_name]):
+                self.write_cell(
+                    col=i + 1,
+                    value=name,
+                    font=Font(size=16)
+                )
 
             # iterate over headers to fill in row
             for i, header in enumerate(self.cur_headers):
 
                 # select cell
                 i += 3  # offset for first and last name
-                cell = self.sheet.cell(row=self.cur_row, column=i)
-                cell.font = Font(size=16)
 
                 # select value
-                mins_attended = student.zoom_attendance_report.get(header)
-                if not mins_attended:
+                if not (mins_attended := student.zoom_attendance_report.get(header)):
                     mins_attended = 0
 
-                # assign value to cell
-                cell.value = mins_attended
-
-                # color cell
-                cell.fill = self.get_color(
-                    mins_attended,
-                    self.name_to_meeting_map[header].datetime.timestamp()
+                self.write_cell(
+                    col=i,
+                    value=mins_attended,
+                    fill=self.get_color(
+                        mins_attended,
+                        self.name_to_meeting_map[header].datetime.timestamp()
+                    ),
+                    font=Font(size=16)
                 )
             self.cur_row += 1
 
