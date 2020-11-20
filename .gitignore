@@ -24,3 +24,6 @@ helper/manual_zoom_matches.py
 Session.vim
 NOTES.md
 debug.py
+dist/
+build/
+*.egg-info
