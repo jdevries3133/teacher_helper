@@ -218,7 +218,7 @@ class Meeting(HelperConsumer):
                 self.known_matches[row[0]] = st  # put new match into cache
 
             else:
-                logger.debug(f'{st.name} was fetched from MeetingSet cache.')
+                logger.debug(f'Global cache hit for {st.name}')
 
             logger.debug(f'FIRST PASS MATCH {row[0]} == {st.name}')
 
@@ -383,6 +383,14 @@ class Meeting(HelperConsumer):
         logger.debug(f'Name Part: {name_part}')
         logger.debug(f'Subgroup: {compare_attr}')
 
+        if (
+            st := (
+                self._check_scoped_cache(
+                    getattr(self, compare_attr), student_name)
+            )
+        ):
+            logger.debug(f'Subgroup-scoped cache hit for {st.name}')
+            return st
         qs = [
             getattr(s, name_part) for s in self.helper.students.values()
             if getattr(s, compare_attr) == getattr(self, compare_attr)
@@ -392,42 +400,61 @@ class Meeting(HelperConsumer):
             qs,
             limit=2
         )
-        if name_match[0][1] > self.SEARCH_CONFIDENCE_THRESHOLD:
-            # we have a potential match! Let's see if it's truly a match
-            # first, re-extract the student object from all students...
 
-            # If the best two matches are the same name, there are two or more
-            # students in the grade level with that name. It is therefore
-            # impossible to perform a perfect match against only the first name
-            if name_match[1][0] == name_match[0][0]:
-                logger.debug(
-                    f'Cannot proceed with {student_name}. More than one '
-                    f'student in the {self.grade_level}th grade has the first '
-                    f'name {name_match[0][0]}.'
-                )
+        # Do not return low confidence match
+        if not name_match[0][1] > self.SEARCH_CONFIDENCE_THRESHOLD:
+            return
 
-            # If the first two matches are not the same, that means the first
-            # name is unique, and we can make a match within the subgroup.
-
-            name = name_match[0][0]
-
-            # for a full name match, it's just a dict lookup to get st
-            if name == 'name':
-                st = self.helper.students[name]
-            else:
-                for st in self.helper.students.values():
-                    # skip if the student is not in the subgroup
-                    if not (
-                        getattr(st, compare_attr) == getattr(self, compare_attr)
-                    ):
-                        continue
-                    # break when we find the right student
-                    if name in st.name:
-                        break
+        # Proceed with potential match
+        if name_match[1][0] == name_match[0][0]:
             logger.debug(
-                f'SUBGROUP MATCH {name} matches with {st.name} within {compare_attr}'
+                f'Cannot proceed with {student_name}. More than one '
+                f'student in the {self.grade_level}th grade has the first '
+                f'name {name_match[0][0]}.'
             )
-            return st
+
+        name = name_match[0][0]
+
+        if name == 'name':  # shortcut for full name matches
+            if (st := self.helper.students[name]): 
+                return st
+
+        # we know the name is unique in the subgroup, so find the corresponding
+        # Student object in the subgroup and return it.
+        for st in self.helper.students.values():
+
+            # skip if st is not in the subgroup
+            if not (
+                getattr(st, compare_attr) == getattr(self, compare_attr)
+            ):
+                continue
+
+            # break when we find the right student
+            if name in st.name:
+                break
+        logger.debug(
+            f'SUBGROUP MATCH {name} matches with {st.name} within '
+            + compare_attr
+        )
+
+        # insert into cache, scoped to this subgroup
+        self.known_matches[getattr(self, compare_attr)].setdefault(
+            student_name,
+            st
+        )
+        return st
+
+    def _check_scoped_cache(self, cache_key, student_name):
+        """
+        cache_key will be the name of the subgroup. Returns Student or
+        None.
+        """
+        scoped_cache = self.known_matches.get(cache_key)
+        if not scoped_cache:
+            self.known_matches[cache_key] = {}
+            return
+        return scoped_cache.get(student_name)
+
 
 
 
