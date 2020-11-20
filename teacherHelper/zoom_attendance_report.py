@@ -1,6 +1,3 @@
-# TODO fix inconsistent style where I kept putting spaces around operators
-# in self.write_cell() function calls.
-
 from copy import copy
 import datetime
 import logging
@@ -199,7 +196,7 @@ class Meeting(HelperConsumer):
         First patch fetching only high confidence matches and determining
         subgroups within which we can search.
         """
-        logger.info('*** Begin first matching pass ***')
+        logger.debug('*** Begin first matching pass ***')
         grade_levels_within = set()
         homerooms_within = set()
         for row in self.rows[4:]:
@@ -233,7 +230,7 @@ class Meeting(HelperConsumer):
             grade_levels_within.add(st.grade_level)
             homerooms_within.add(st.homeroom)
 
-        logger.info(
+        logger.debug(
             f'After the first matching pass, {len(self._matched)} students have been '
             'matched.\n*** Begin second matching pass ***'
         )
@@ -325,6 +322,7 @@ class Meeting(HelperConsumer):
             )
             return st
 
+    # pylint: disable=inconsistent-return-statements
     def try_matching_student_within_subgroup(self, student_name, name_part='name'):
         """
         Unlike in the self.helper student matching function, this class is aware of
@@ -1069,7 +1067,7 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
                 f'{self.cur_homeroom.teacher}, Grade '
                 + self.cur_homeroom.grade_level
             ),
-            font = Font(size=24, bold=True)
+            font=Font(size=24, bold=True)
         )
 
     def _sorted_homerooms(self):
@@ -1077,8 +1075,8 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
         Return a list of  homerooms, sorted primarily
         by homeroom grade and secondarily by homeroom teacher name.
         """
-        homerooms=[h for h in self.helper.homerooms.values()]
-        homerooms.sort(key = lambda h: (h.grade_level, h.teacher))
+        homerooms = [h for h in self.helper.homerooms.values()]
+        homerooms.sort(key=lambda h: (h.grade_level, h.teacher))
         return homerooms
 
 
@@ -1112,21 +1110,21 @@ class HighlightSheetWriter(BaseSheetWriter):
 
     def _write_sheet_header(self):
         self.write_cell(
-            value = 'Highlights',
+            value='Highlights',
             col=1,
-            font = Font(size=32, bold=True),
+            font=Font(size=32, bold=True),
         )
         self.cur_row += 2
 
         self.write_cell(
-            value = 'Unmatched Names',
+            value='Unmatched Names',
             col=1,
-            font = Font(size=24, bold=True)
+            font=Font(size=24, bold=True)
         )
         self.cur_row += 1
 
         self.write_cell(
-            value = (
+            value=(
                 'This report is not perfect. As you very well know, many '
                 'students use names in zoom calls that have no relationship '
                 'to their real name. You had an opportunity to manually match '
@@ -1138,7 +1136,7 @@ class HighlightSheetWriter(BaseSheetWriter):
         self.cur_row += 1
 
         self.write_cell(
-            value = (
+            value=(
                 'Nevertheless, the names are stored here for your reference, '
                 'and so that you have a sense of how many students are missing '
                 'from the rest of this report.'
@@ -1164,15 +1162,15 @@ class HighlightSheetWriter(BaseSheetWriter):
             # again. n is porportional to len(unidentifiable) to make a nice block.
             if not i % n:
                 cur_col += 1
-                self.cur_row=copy(start_block)
+                self.cur_row = copy(start_block)
 
             self.cur_row += 1
 
             # write name to current cell
             self.write_cell(
-                row = self.cur_row,
-                col = cur_col,
-                value = name
+                row=self.cur_row,
+                col=cur_col,
+                value=name
             )
 
         # cleanup; set cur_row to two rows after the end of the name block
