@@ -57,6 +57,7 @@ class Meeting(HelperConsumer):
     def __init__(self, csv_string: str):
         super().__init__()
         self.csv_string = csv_string
+        self.SEARCH_CONFIDENCE_THRESHOLD = 90
 
         self.average_len_attendance = None  # int
         self.attendees = []         # list[helper.Student]
@@ -185,12 +186,16 @@ class Meeting(HelperConsumer):
         grade_levels_within = set()
         homerooms_within = set()
         matched = []  # cached matched, skip on second pass
-        for i, row in enumerate(self.rows[4:]):
-            st = self.helper.find_nearest_match(row[0], auto_yes=True)
+        logger.info('*** Begin first matching pass ***')
+        for row in self.rows[4:]:
+            st = self.helper.find_nearest_match(
+                row[0],
+                auto_yes=True,
+                threshold=self.SEARCH_CONFIDENCE_THRESHOLD)
             if not st:
                 continue
 
-            logger.debug(f'First pass match. {row[0]} == {st.name}')
+            logger.debug(f'FIRST PASS MATCH {row[0]} == {st.name}')
 
             st.zoom_attendance_report.setdefault(
                 self.__str__(),
@@ -200,9 +205,9 @@ class Meeting(HelperConsumer):
             grade_levels_within.add(st.grade_level)
             homerooms_within.add(st.homeroom)
 
-        logger.debug(
+        logger.info(
             f'After the first matching pass, {len(matched)} students have been '
-            'matched.'
+            'matched.\n*** Begin second matching pass ***'
         )
 
         # we may have determined grade level or homerooms, thus narrowing the
@@ -217,13 +222,19 @@ class Meeting(HelperConsumer):
 
         # SECOND PASS
         for row in self.rows[4:]:
+
+            # skip those we've already matched
             if row[0] in matched:
                 continue
+
+            logger.debug(f'Attempting to match {row[0]} on the second pass')
+
             st = self.match_student(row[0])
             if not st:
+                logger.debug(f'No match for {row[0]}')
                 self.unidentifiable.append(row[0])
                 continue
-            logger.debug(f'Second pass contextual match {row[0]} == {st.name}')
+            logger.debug(f'SECOND PASS MATCH {row[0]} == {st.name}')
             st.zoom_attendance_report.setdefault(
                 self.__str__(),
                 int(row[2])  # duration of attendance
@@ -250,7 +261,11 @@ class Meeting(HelperConsumer):
         name.replace('ω', '')
         try:
             # use helper search, which can raise warnings
-            st = self.helper.find_nearest_match(name, auto_yes=True)
+            st = self.helper.find_nearest_match(
+                name,
+                auto_yes=True,
+                threshold=self.SEARCH_CONFIDENCE_THRESHOLD
+            )
             if st:
                 return st
         except Warning:
@@ -261,60 +276,126 @@ class Meeting(HelperConsumer):
             return st
         for part in [i for i in re.split(r'[ |.]', name) if i]:
             # search each word in name within subgroup
-            st = self.try_matching_student_within_subgroup(part)
+            st = self.try_matching_student_within_subgroup(
+                part,
+                name_part='first_name'
+            )
             if st:
                 return st
+            # if that didn't work, try again assuming that this part is a last
+            # name
             st = self.try_matching_student_within_subgroup(
-                part, last_name=True)
+                part,
+                name_part='last_name'
+            )
             return st
 
-    def try_matching_student_within_subgroup(self, student_name, last_name=False):
+    def try_matching_student_within_subgroup(self, student_name, name_part='name'):
         """
         Unlike in the self.helper student matching function, this class is aware of
         the grade level of the student it is trying to match. If the self.helper
         method returns None, this fallback method tries to identify the
         student through process of elimination within their own grade. This
-        helps match more students who only provide their first name.
+        helps match more students.
+
+        name_part is the part of the student_name being provided, and the
+        part that we will search against for the other names. Acceptable values
+        are:
+
+            - 'first_name'
+            - 'last_name'
+            - 'name' (full name; first and last)
         """
+
+        # ok this is super confusing so here goes... there's definitely gonna
+        # be more explaining here than actual code....
+
+        # first, recognize that self.homeroom and self.grade_level are
+        # initialized as None.
+
+        # now, self._parse_csv_body() iterates over the rows twice. On the
+        # first pass, this function is NOT called. Instead,
+        # teacherHelper.helper.Helper.find_nearest_match is used ONLY. The
+        # reason for this is that it provides more reliable results, but
+        # also has a higher likelihood of failure.
+
+        # on the second pass through the data, this func is called in a last
+        # ditch attempt to find a match for the student. See, during the first
+        # pass, we created a set of the homerooms and grade levels that the
+        # easy-to-match students were part of. IF this set is only one item
+        # long after the easier half of the group is matched, we assume
+        # that the rest of the group is also part of that subgroup.
+
+        # With that assumption made, self.homeroom and self.grade_level are set
+        # to a string and integer, respectively. Now, we can use those values
+        # to filter all of the students in self.helper.students() and search
+        # within a smaller subgroup instad. THAT is what happens here.
+
+        # The "magic" in this function is that we may be seraching within the
+        # homeroom, or we may be searching within the whole grade level – we
+        # don't know yet when the function is called. This first block of code
+        # determines which filter is available to us, and then produces a
+        # queryset of student names from that subgroup which we can fuzzily
+        # match against.
+
         if self.homeroom:  # preferentially search within homeroom
             compare_attr = 'homeroom'
         elif self.grade_level:  # fallback on grade level
             compare_attr = 'grade_level'
         else:
             return  # no subgroup to compare within
-        name_part = 'last_name' if last_name else 'first_name'
+
+        logger.debug('Begin searching for subgroup match')
+        logger.debug(f'Name: {student_name}')
+        logger.debug(f'Name Part: {name_part}')
+        logger.debug(f'Subgroup: {compare_attr}')
+
         qs = [
-            s.__dict__[name_part] for s in self.helper.students.values()
-            if s.__dict__[compare_attr] == self.__dict__[compare_attr]
+            getattr(s, name_part) for s in self.helper.students.values()
+            if getattr(s, compare_attr) == getattr(self, compare_attr)
         ]
-        first_name_match = process.extract(
+        name_match = process.extract(
             student_name,
             qs,
             limit=2
         )
-        if first_name_match[0][1] > 90:
+        if name_match[0][1] > self.SEARCH_CONFIDENCE_THRESHOLD:
             # we have a potential match! Let's see if it's truly a match
             # first, re-extract the student object from all students...
 
             # If the best two matches are the same name, there are two or more
             # students in the grade level with that name. It is therefore
             # impossible to perform a perfect match against only the first name
-            if first_name_match[1][0] == first_name_match[0][0]:
+            if name_match[1][0] == name_match[0][0]:
                 logger.debug(
                     f'Cannot proceed with {student_name}. More than one '
                     f'student in the {self.grade_level}th grade has the first '
-                    f'name {first_name_match[0][0]}.'
+                    f'name {name_match[0][0]}.'
                 )
 
             # If the first two matches are not the same, that means the first
-            # name is unique, and we can make a match within the grade level.
-            for n, s in self.helper.students.items():
-                if n.split(' ')[0] == first_name_match[0][0]:
-                    logger.debug(
-                        'Successful grade level match for '
-                        + self.helper.students[n].name
-                    )
-                    return self.helper.students[n]
+            # name is unique, and we can make a match within the subgroup.
+
+            name = name_match[0][0]
+
+            # for a full name match, it's just a dict lookup to get st
+            if name == 'name':
+                st = self.helper.students[name]
+            else:
+                for st in self.helper.students.values():
+                    # skip if the student is not in the subgroup
+                    if not (
+                        getattr(st, compare_attr) == getattr(self, compare_attr)
+                    ):
+                        continue
+                    # break when we find the right student
+                    if name in st.name:
+                        break
+            logger.debug(
+                f'SUBGROUP MATCH {name} matches with {st.name} within {compare_attr}'
+            )
+            return st
+
 
 
 class MeetingSet(HelperConsumer):
@@ -396,8 +477,8 @@ class MeetingSet(HelperConsumer):
             else:
                 self.groups.append([meeting])
             yield meeting  # report progress up the callstack.
-        logger.debug('** Dump of students\' attendance reports')
-        logger.debug([(s.name, s.zoom_attendance_report) for s in self.helper.students.values()])
+        # logger.debug('** Dump of students\' attendance reports')
+        # logger.debug([(s.name, s.zoom_attendance_report) for s in self.helper.students.values()])
         self.is_processed = True
 
     def match_meeting_with_group_by_union(self, meeting: Meeting):
@@ -436,10 +517,6 @@ class MeetingSet(HelperConsumer):
             logger.info(f'Closest Meeting: {closest_meeting}')
             logger.info(f'Current Meeting: {meeting}')
             logger.info(f'Is Matched: {is_matched}')
-            logger.debug('cm__attendees')
-            logger.debug(cm__attendees)
-            logger.debug('m__attendees')
-            logger.debug(m__attendees)
             logger.info('----------- END GROUP MATCH -----------')
             if is_matched:
                 return group
@@ -467,6 +544,7 @@ class MeetingSet(HelperConsumer):
                     'attendees': [(s.name, s.zoom_attendance_report) for s in meeting.attendees],
                     'datetime': meeting.datetime.isoformat(),
                     'topic': meeting.topic,
+                    'search_confidence': meeting.SEARCH_CONFIDENCE_THRESHOLD
                 }
                 serialized_meetings.append(meeting_dict)
             serialized_groups.append(serialized_meetings)
@@ -520,6 +598,7 @@ class MeetingSet(HelperConsumer):
 
                 # reconstruct meeting object
                 meeting = Meeting('')
+                meeting.SEARCH_CONFIDENCE_THRESHOLD = meeting_dict['search_confidence']
                 meeting.topic = meeting_dict['topic']
                 meeting.datetime = datetime.datetime.fromisoformat(
                     meeting_dict['datetime']
@@ -845,7 +924,7 @@ class MainSheetWriter(BaseSheetWriter):
         )
         self.cur_meetings.sort(key=lambda m: m.datetime)
         self.cur_headers = [m.__str__() for m in self.cur_meetings]
-        logger.debug(f'Headers assigned: {self.cur_headers}')
+        # logger.debug(f'Headers assigned: {self.cur_headers}')
         write_headers = ['Last Name', 'First Name'] + self.cur_headers
         for i, topic in enumerate(write_headers):
             i += 1  # 1-based index for openpyxl
@@ -917,7 +996,7 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
             homeroom_meeting_set = set()
             for st in homeroom.students:
 
-                logger.debug(f'{st.name} has been to meetings: {st.zoom_attendance_report}')
+                # logger.debug(f'{st.name} has been to meetings: {st.zoom_attendance_report}')
 
                 # update cur_meetings with all the meetings this student went
                 # to
@@ -929,7 +1008,7 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
             self.cur_meetings = [
                 self.name_to_meeting_map[n] for n in homeroom_meeting_set
             ]
-            logger.debug(f'Homeroom\'s meetings before writing: {self.cur_meetings}')
+            # logger.debug(f'Homeroom\'s meetings before writing: {self.cur_meetings}')
 
             self._write_homeroom_title()
             self._write_group_headers()

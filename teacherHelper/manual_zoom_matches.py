@@ -24,7 +24,10 @@ def MANUAL_FIXES(name):
         'stanthemotoman': 'William Castillo',
         'ĉ̵̅̓̕h̴̛͈́͊l̷͒͐̿͒o̶̓̇̀̚e̶͂̀': 'Chloe Pfeifer',
         'brendy.valentina': 'Brendy Rivera',
-        'miyah': 'Miya Madayag',
+
+        # no longer at empowerment I think? Matches incorrectly with Miya
+        # Magdag every time
+        'miyah': '',
         'malachi': 'Malachi Tucker',
         'francine': 'Francine Garino',
         'darius': 'Darius Maximus Montecastro',
