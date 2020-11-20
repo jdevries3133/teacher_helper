@@ -180,7 +180,7 @@ class Meeting(HelperConsumer):
         if 'pm' in time_str.lower():
             hour += 12
         self.datetime = datetime.datetime(year, month, day, hour, minute)
-        logger.info(f'{"*" * 30} BEGIN PARSING {self.topic} at {self.datetime.date()} {"*" * 30}')
+        logger.info(f'{"*" * 30} PARSING {self.topic} at {self.datetime.date()} {"*" * 30}')
 
     def _parse_csv_body(self):
         """
@@ -196,7 +196,7 @@ class Meeting(HelperConsumer):
         First patch fetching only high confidence matches and determining
         subgroups within which we can search.
         """
-        logger.debug('*** Begin first matching pass ***')
+        logger.debug('*** First matching pass ***')
         grade_levels_within = set()
         homerooms_within = set()
         for row in self.rows[4:]:
@@ -232,7 +232,7 @@ class Meeting(HelperConsumer):
 
         logger.debug(
             f'After the first matching pass, {len(self._matched)} students have been '
-            'matched.\n*** Begin second matching pass ***'
+            'matched.\n*** Second matching pass ***'
         )
 
         # we may have determined grade level or homerooms, thus narrowing the
@@ -378,7 +378,7 @@ class Meeting(HelperConsumer):
         else:
             return  # no subgroup to compare within
 
-        logger.debug('Begin searching for subgroup match')
+        logger.debug('Searching for subgroup match')
         logger.debug(f'Name: {student_name}')
         logger.debug(f'Name Part: {name_part}')
         logger.debug(f'Subgroup: {compare_attr}')
@@ -545,13 +545,12 @@ class MeetingSet(HelperConsumer):
             is_matched = total > union
 
             # MATCH CRITERIA
-            logger.info('----------- BEGIN GROUP MATCH -----------')
+            logger.info('----------- GROUP MATCH -----------')
             logger.info(f'Total: {total}')
             logger.info(f'Union: {union}')
             logger.info(f'Closest Meeting: {closest_meeting}')
             logger.info(f'Current Meeting: {meeting}')
             logger.info(f'Is Matched: {is_matched}')
-            logger.info('----------- END GROUP MATCH -----------')
             if is_matched:
                 return group
         return []
@@ -762,7 +761,7 @@ class WorkbookWriter:
         """
         # write sheets
         for SheetWriter in self.sheet_writer_classes:
-            logger.info(f'Began writing with SheetWriter class: {SheetWriter}')
+            logger.info(f'Writing with SheetWriter class: {SheetWriter}')
             wr = SheetWriter(self.meeting_set, self.workbook.create_sheet())
             wr.write_sheet()
 
@@ -835,7 +834,7 @@ class MainSheetWriter(BaseSheetWriter):
         self.cur_row += 2
         for group in self.groups:
 
-            logger.info(f'Main sheet writer began writing group:\n{group}')
+            logger.debug(f'Main sheet writer writing group:\n{group}')
 
             self.cur_meetings = group
 
@@ -1014,7 +1013,7 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
         # for each homeroom, sorted by grade and teacher name
         for homeroom in self._sorted_homerooms():
 
-            logger.info(f'HomeroomSummaryWriter began writing {homeroom.teacher}')
+            logger.info(f'HomeroomSummaryWriter writing {homeroom.teacher}')
 
             self.cur_homeroom = homeroom
             self.cur_group_students = homeroom.students
