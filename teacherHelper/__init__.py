@@ -1,5 +1,4 @@
 import os
-import logging
 from pathlib import Path
 
 from .email_ import Email
