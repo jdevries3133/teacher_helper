@@ -18,8 +18,10 @@ class Email:
             self.password = os.getenv('EMAIL_PASSWORD')
         self.template_dir = Path(Path(__file__).parent, 'html_email_templates')
 
-    def send(self, to, subject, message: list, html=False):
+    def send(self, *, to, subject, message: list, html=False):
         """
+        Accepts kwargs ONLY
+
         Send plain text emails en masse.
 
         Set html, and the message should be a tuple:
@@ -37,7 +39,11 @@ class Email:
             )
         # init ssl
         context = ssl.create_default_context()
-        with smtplib.SMTP_SSL('smtp.gmail.com', port=465, context=context) as server:
+        with smtplib.SMTP_SSL(
+            'smtp.gmail.com',
+            port=465,
+            context=context
+        ) as server:
             server.login(
                 self.username,
                 self.password
@@ -65,4 +71,7 @@ class Email:
             f"<p style=\"font-family: Helvetica, Arial, Sans-Serif;\">{i}</p>"
             for i in message
         ])
-        return html_message.replace('{{insert}}', paragraphs), '\n\n'.join(message)
+        return (
+            html_message.replace('{{insert}}', paragraphs),
+            '\n\n'.join(message)
+        )
