@@ -31,6 +31,7 @@ class ZoomReportFormatIncorrect(Exception):
     """
     Raised by Meeting when the user apparently didn't check the boxes they
     needed to check when generating the report.
+
     """
 
 
@@ -508,18 +509,33 @@ class MeetingSet(HelperConsumer):
     """
 
 
-    def __init__(self, csv_strings: list, group_map=None, trust_topics=False):
+    def __init__(self, csv_strings: list, group_map=None, trust_topics=False, known_matches=None):
         super().__init__()
         self.csv_strings = csv_strings
         self.groups = []
         self.meetings = []  # all meetings in a flattened list
-        self.known_matches = {}  # match cache
+        self.known_matches = {}  # cache layer; can be kickstarted with starter data
         self.TOTAL_TO_UNION_RATIO_ADJUSTMENT = 0.9
         self.is_processed = False
+
+        logger.info(
+            'Meetingset initialized with the following known matches passed '
+            'from outside:\n%(known_matches)s',
+            {'known_matches': known_matches}
+        )
 
         # init dict on student objects
         for st in self.helper.students.values():
             st.__dict__.setdefault('zoom_attendance_report', {})
+
+        if known_matches:
+            for zoom_name, real_name in known_matches.items():
+                if (st := self.helper.find_nearest_match(real_name, auto_yes=True)):
+                    logger.info(
+                        f'Externally passed known_match {zoom_name} == '
+                        f'{real_name} matched with student object {st}'
+                    )
+                    self.known_matches.setdefault(zoom_name, st)
 
     def process(self):
         """
@@ -527,19 +543,27 @@ class MeetingSet(HelperConsumer):
         after it has been parsed.
         """
         for csv_string in self.csv_strings:
+            # instantiate and process meeting.
             meeting = Meeting(csv_string, known_matches=self.known_matches)
             meeting.read_report()
-            self.known_matches = {
-                **meeting.known_matches,
-                **self.known_matches
-            }
+
+            # merge matches from meeting into the cache.
+            for zn, st in meeting.known_matches.items():
+                self.known_matches.setdefault(
+                    zn,
+                    st
+                )
             self.meetings.append(meeting)
+
+            # dynamically group meeting
             match = self.match_meeting_with_group_by_union(meeting)
             if match:
                 match.append(meeting)
             else:
                 self.groups.append([meeting])
-            yield meeting  # report progress up the callstack.
+
+            # report progress up the callstack.
+            yield meeting
 
         self.is_processed = True
 
@@ -581,6 +605,17 @@ class MeetingSet(HelperConsumer):
             if is_matched:
                 return group
         return []
+
+    @property
+    def all_unidentifiable(self):
+        """
+        Set of unidentified names across all meetings.
+        """
+        assert self.is_processed
+        all_ = set()
+        for m in self.meetings:
+            all_.update(m.unidentifiable)
+        return all_
 
     def get_serializable_data(self):
         """
@@ -669,6 +704,7 @@ class MeetingSet(HelperConsumer):
             groups.append(group_meetings)
 
         # reconstruct MeetingSet
+        self.is_processed = True  # it is illegal to serialize unprocessed meetingsets.
         self.groups = groups
         self.meetings = all_meetings
         return self
@@ -850,7 +886,8 @@ class MainSheetWriter(BaseSheetWriter):
 
         # map of meeting header strings to their timestamp, for later.
         self.name_to_meeting_map = {
-            m.__str__(): m for m in self.meeting_set.meetings }
+            str(m) : m for m in self.meeting_set.meetings
+        }
 
     def write_sheet(self):
         """
@@ -1051,7 +1088,7 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
             homeroom_meeting_set = set()
             for st in homeroom.students:
 
-                # logger.debug(f'{st.name} has been to meetings: {st.zoom_attendance_report}')
+                logger.debug(f'{st.name} has been to meetings: {st.zoom_attendance_report}')
 
                 # update cur_meetings with all the meetings this student went
                 # to
@@ -1063,7 +1100,7 @@ class HomeroomSummaryWriter(MainSheetWriter, HelperConsumer):
             self.cur_meetings = [
                 self.name_to_meeting_map[n] for n in homeroom_meeting_set
             ]
-            # logger.debug(f'Homeroom\'s meetings before writing: {self.cur_meetings}')
+            logger.debug(f'Homeroom\'s meetings before writing: {self.cur_meetings}')
 
             self._write_homeroom_title()
             self._write_group_headers()
@@ -1196,7 +1233,6 @@ class HighlightSheetWriter(BaseSheetWriter):
 
         # cleanup; set cur_row to two rows after the end of the name block
         self.cur_row += start_block + n + 2
-
 
 class RawDataWriter(BaseSheetWriter):
     def __init__(self, *a, **kw):
