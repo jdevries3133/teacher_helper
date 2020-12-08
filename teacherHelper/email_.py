@@ -17,6 +17,23 @@ class Email:
         if not self.password:
             self.password = os.getenv('EMAIL_PASSWORD')
         self.template_dir = Path(Path(__file__).parent, 'html_email_templates')
+        self.connection = None
+
+    def __enter__(self):
+        context = ssl.create_default_context()
+        self.connection = smtplib.SMTP_SSL(
+            'smtp.gmail.com',
+            port=465,
+            context=context,
+        )
+        self.connection.login(
+            self.username,
+            self.password,
+        )
+        return self
+
+    def __exit__(self, exc_type, exc_message, traceback):
+        self.connection.close()
 
     def send(self, *, to, subject, message: list, html=False):
         """
@@ -37,28 +54,23 @@ class Email:
                 'in the list will be mapped to a <p> tag in the html, or '
                 'joined with a double newline in the plain text.'
             )
-        # init ssl
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(
-            'smtp.gmail.com',
-            port=465,
-            context=context
-        ) as server:
-            server.login(
-                self.username,
-                self.password
+        if not self.connection:
+            raise Exception(
+                'Connection must be established in __enter__. Use this class '
+                'with a context manager.'
             )
-            me = 'jdevries@empacad.org'
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = me
-            msg['To'] = to
-            html, text = self.make_message(message)
-            part1 = MIMEText(text, 'plain')
-            part2 = MIMEText(html, 'html')
-            msg.attach(part1)
-            msg.attach(part2)
-            server.sendmail(me, to, msg.as_string())
+        # init ssl
+        me = 'jdevries@empacad.org'
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = me
+        msg['To'] = to
+        html, text = self.make_message(message)
+        part1 = MIMEText(text, 'plain')
+        part2 = MIMEText(html, 'html')
+        msg.attach(part1)
+        msg.attach(part2)
+        self.connection.sendmail(me, to, msg.as_string())
 
     def make_message(self, message):
         """
