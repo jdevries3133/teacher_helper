@@ -8,14 +8,14 @@ import os
 
 class Email:
     def __init__(self, username=None, password=None):
-        self.username = username
-        self.password = password
+        self.username:str = username if username else ''
+        self.password:str = password if password else ''
         # use my default env variables for username and password if none were
         # passed
-        if not self.username:
-            self.username = os.getenv('EMAIL_USERNAME')
-        if not self.password:
-            self.password = os.getenv('EMAIL_PASSWORD')
+        if not self.username and (un := os.getenv('EMAIL_USERNAME')):
+            self.username = un
+        if not self.password and (pw := os.getenv('EMAIL_PASSWORD')):
+            self.password = pw
         self.template_dir = Path(Path(__file__).parent, 'html_email_templates')
         self.connection = None
 
@@ -32,7 +32,7 @@ class Email:
         )
         return self
 
-    def __exit__(self, exc_type, exc_message, traceback):
+    def __exit__(self, *_):
         self.connection.close()
 
     def send(self, *, to, subject, message: list, html=False):
@@ -72,18 +72,27 @@ class Email:
         msg.attach(part2)
         self.connection.sendmail(me, to, msg.as_string())
 
-    def make_message(self, message):
+    def make_message(self, message: list, raise_exception=True):
         """
         Make a message with the default html template.
         """
-        # html
+        # load template
         with open(Path(self.template_dir, 'default.html'), 'r') as htmlf:
             html_message = htmlf.read()
-        paragraphs = '\n'.join([
-            f"<p style=\"font-family: Helvetica, Arial, Sans-Serif;\">{i}</p>"
-            for i in message
-        ])
+
+        # generate html; text strings become paragraphs and blank strings
+        # become <br /> elements.
+        html = []
+        for i in message:
+            if i:
+                html.append(
+                    "<p style=\"color: black; font-family: Helvetica, Arial, Sans-Serif;\">"
+                      f"{i}"
+                    "</p>"
+                )
+            else:
+                html.append('<br />')
         return (
-            html_message.replace('{{insert}}', paragraphs),
+            html_message.replace('{{insert}}', '\n'.join(html)),
             '\n\n'.join(message)
         )
