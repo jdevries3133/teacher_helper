@@ -95,6 +95,16 @@ class ShellUtils:
             except IndexError:
                 self.improper_usage()
 
+        # COMMAND "emp new" => refresh cache from files in ./data dir
+        elif self.args[1] == 'new':
+            new = Helper.new_school_year(
+                Path(Path(__file__).parent, 'data', 'students.csv'),
+                Path(Path(__file__).parent, 'data', 'parents.csv'),
+            )
+            new.write_cache()
+            print('Cache updated.')
+            sys.exit()
+
         # COMMAND "emp report" => grep for zoom attendance history through
                                   # downloaded reports
         elif self.args[1] == 'report':
@@ -132,8 +142,8 @@ class ShellUtils:
         saves the step of searching for the student email since their emails
         are gibberish.
 
-        TODO: implement CC'ing
         """
+        # TODO: implement CC'ing
 
         # assemble student name and message
         data = {'name': '', 'message': '', 'subject': ''}
@@ -188,11 +198,6 @@ class ShellUtils:
             if inp.lower() == 'n':
                 return False
             print('Please enter "y" or "n"')
-
-
-
-
-
 
     def search_by_parent(self, name):
         self.helper
@@ -301,6 +306,10 @@ class ShellUtils:
         timer [minutes] [message]
             Start a timer that will say [message] after [minutes]. The message
             will be spoken by a robot voice.
+
+        new
+            Will refresh the cache by loading in spreadsheets at ./data/students.csv
+            and ./data/parents.csv.
 
         [no arguments]
             Run this script with no arguments, and it will enter the shell mode.
