@@ -28,12 +28,15 @@ class OnCourseMixin:
 
         with open(student_data, 'r', encoding='utf-8-sig') as csvfile:
             rows = [r for r in csv.reader(csvfile, delimiter=',')]
+            # TODO: load birthday field as datetime
+            # TODO: make thsi less repetitive. Just use a named collection.
             acceptable_headers = [
                 'first name',
                 'last name',
                 'grade level',
                 'homeroom teacher',
                 'email address',
+                'birth date',
             ]
             for context, row in IterCsv(acceptable_headers, rows, strict=strict_headers):
                 (
@@ -41,13 +44,15 @@ class OnCourseMixin:
                     last,
                     grade,
                     homeroom,
-                    email
+                    email,
+                    birthday,
                 ) = (
                     row[context['first name']],
                     row[context['last name']],
                     row[context['grade level']],
                     row[context['homeroom teacher']],
                     row[context['email address']],
+                    row[context['birth date']],
                 )
                 # convert grade to int
                 for i in [4, 5, 6]:
@@ -60,7 +65,8 @@ class OnCourseMixin:
                         'last_name': last,
                         'grade_level': grade,
                         'homeroom': homeroom,
-                        'email': email
+                        'email': email,
+                        'birthday': birthday,
                     }
                 )
                 STUDENTS[first + ' ' + last] = student
@@ -72,6 +78,7 @@ class OnCourseMixin:
                     )
                 else:
                     HOMEROOMS[homeroom].students.append(student)
+
         # instantiation
         self = cls(
             HOMEROOMS, STUDENTS
@@ -100,6 +107,7 @@ class OnCourseMixin:
                         'Remember, "student resides with"  is misspelled in '
                         'OnCourse. Fix it in the CSV you downloaded.'
                     )
+                # convert spreadsheet rows to attributes of student class.
                 raw_context = {
                     'first_name': row[context.get('guardian first name')],
                     'last_name': row[context.get('guardian last name')],
