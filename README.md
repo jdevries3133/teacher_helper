@@ -1,6 +1,6 @@
 # Overview
 
-This is a library of stuff that I have, mostly unsuccessfully, used to automate
+This is a library of stuff that I have, used to automate
 my work as a teacher. For the most part, it's been the primary means for me
 learning object oriented programming, and has had a history of massive revision
 as I continue to learn and fix my mistakes. There are currently three major
@@ -11,6 +11,8 @@ useful parts of this project:
 3. <a href="#classroom-automator">pyautogc</a>
 
 First, the Helper class encapsulates information that I deal with as a teacher.
+This includes an object-oriented representation of teachers, students,
+homerooms, parents, and extra-curricular groups.
 The most important attribute is helper.students which is a dictionary; students'
 full names are the keys, and Student class instances from `helper/student.py`
 corresponding to that student are the values. Honestly, the Helper class is
@@ -20,7 +22,7 @@ and helper.homeroom.Homeroom, and helper.group.Group. All of these classes
 are nestled within the helper class so that you can compose loops and
 make selections within python to find information on students. For example,
 
-```
+```python
 >>> helper.students.get('Johnny Smith').homeroom.teacher
 Jones
 >>> all_fourth = [s for s in helper.students.values() if s.grade_level == 4]
@@ -32,13 +34,8 @@ Jones
 
 <h1 id="helper">Helper</h1>
 
-> The Helper class encapsulates information that must be made pythonic to get
-> anything else done. Information on all of your students, homeroom lists,
-> parent contact information, etc. are available within this class. The
-> helper.find_nearest_match() is extremely useful for bringing in data
-> from elsewhere, like spreadsheets of attendance records, CSV file output from
-> flipgrid, edpuzzle, or other educational platforms, and allowing you to
-> collate, comprehend, and reduce data through python.
+> An object-oriented representation of teachers, students,
+> homerooms, parents, and extra-curricular groups.
 
 ## Top-Level `shell.py`
 
@@ -56,9 +53,11 @@ First, figure out the command for python <= version 3.8 on your machine;
 
 Then, create the virtual environment and install dependencies
 
-- `[python3|python3.8] -m venv venv`
-- `source venv/bin/activate`
-- `pip install -r requirements.txt`
+```bash
+[python3|python3.8] -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
 Finally, instantiate the helper object and create a cache by calling
 `helper.write_cache()`.
@@ -83,7 +82,8 @@ Once installed, shell.py provides the following utilities:
 
     report [student name]
         Print a report for the student that includes zoom attendance
-        record.
+        record. A simple grep through `./data/zoom_attendance_reports`,
+        presumed to be a directory of csv files.
 
     clock
         Automatically clocks in or out of Paychex, depending on time of day
@@ -91,16 +91,20 @@ Once installed, shell.py provides the following utilities:
 
     timer [minutes] [message]
         Start a timer that will say [message] after [minutes]. The message
-        will be spoken by a robot voice.
+        will be spoken by a robot voice. Depends on osx `say` utility.
+
+    new
+        Will refresh the cache by loading in spreadsheets at
+        `./data/students.csv` and `./data/parents.csv`.
 
     [no arguments]
         Run this script with no arguments, and it will enter the shell mode.
         Here, the helper object is instantiated in the local namespace with
-        the variable name "helper". All attributes and methods are accessible.
+        the variable name "helper".
 
 <h2 id="helper-instantiation">Initial Instantiation</h2>
 
-One of the most difficult things is first instation. The helper class gets
+One of the most difficult things is first instantiation. The helper class gets
 a new_school_year function from it's parent class, `OnCourseMixin`. This
 method specifically works for me with the reports I can generate from OnCourse.
 
@@ -114,6 +118,7 @@ student_data csv should have the following columns:
 - grade level
 - homeroom teacher
 - email address
+- birth date
 
 The guardian_data csv should have the following columns:
 
@@ -203,13 +208,11 @@ These methods will check whether `self.is_logged_in` is true.
 
 **The code is the documentation, good luck 😉**
 
-This module follows a much cleaner Object Oriented design. The
 `ClassroomAutomator` is the lowest base class with a lot of the selenium code
 that actually navigates google classroom. The `FeedbackAutomatorBase` inherits
-that functionality from the `ClassroomAutomator` class, and focuses on giving
+and extends `ClassroomAutomator` to give
 feedback for google doc and slide based assignments in google classrooms,
-which is quite tedious. However, this is an abstract class. It must be
-subclassed whenever a user wants to give feedback on a specific assignment by
-implementing the `assess`, and `comment_bank` methods. A sample implementation
-can be found at the bottom of the file in the `FeedbackAutomator` class, which
-is well documented.
+which is quite tedious. However, this is an abstract class. A sample
+implementation is the `FeedbackAutomator`, but it will be necessary to make
+a new implementation for each assignment simply to define the comment
+bank and assess method.
