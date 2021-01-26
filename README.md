@@ -152,10 +152,35 @@ and it will not ask for user input, it will simply go with the best match.
 
 <h1 id="paychex">Paychex</h1>
 
+```python
+from paychex import Paychex
+```
+
 ### Overview
 
 Paychex class can clock in and out of paychex using headless Google Chrome,
 selenium, and chromedriver.
+
+### Automatic OTP-Fetching
+
+```python
+from paychex import PaychexOTP
+```
+
+Using the above import instead will include some automatic one time password
+fetching functionality; but with a few setup steps.
+
+- To allow the module to read your email:
+  - Define `EMAIL_USERNAME` and `EMAIL_PASSWORD` as environment variables.
+- So the module knows where to look:
+  - Automatically forward all paychex one-time-passwords to an email folder
+    named "Paychex."
+
+Theoretically this version "just works," but I found that in reality it is
+cumbersome and it takes a long time for the message to be forwarded from
+your phone to your email to this program. In the future, I would like to
+add twilio integration to make this progress seamless, but for now just
+typing the one-time-password is probably easiest.
 
 ### Methods
 
