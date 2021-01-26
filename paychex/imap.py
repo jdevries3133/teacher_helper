@@ -12,12 +12,13 @@ class PaychexOTPNotFound(Exception):
 
 
 class Imap(IMAP4_SSL):
-    def __init__(self, username, password):
+    def __init__(self, username, password, mailbox='Paychex'):
         super().__init__('imap.gmail.com')
         self.login(
             username,
             password
         )
+        self.mailbox = mailbox
 
     def get_paychex_otp(self, recursion_depth=0):
         """
@@ -32,6 +33,9 @@ class Imap(IMAP4_SSL):
             return self.get_paychex_otp((recursion_depth + 1))
         _, messages = self.fetch(str(msg_count), '(RFC822)')
         message = messages[0]
+        if not message[1]:
+            sleep(10)
+            return self.get_paychex_otp((recursion_depth + 1))
         msg = message_from_bytes(message[1])
         msg_date = parsedate_to_datetime(msg.get('Date'))
         msg_age = datetime.now().timestamp() - msg_date.timestamp()
@@ -51,11 +55,3 @@ class Imap(IMAP4_SSL):
         raise PaychexOTPNotFound(
             f'No regex match for the following message:\n\n{payload}'
         )
-
-
-if __name__ == '__main__':
-    im = Imap(
-        os.getenv('GMAIL_USERNAME'),
-        os.getenv('GMAIL_PASSWORD')
-    )
-    im.get_paychex_otp()
