@@ -4,6 +4,9 @@ from pathlib import Path
 import smtplib
 import ssl
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Email:

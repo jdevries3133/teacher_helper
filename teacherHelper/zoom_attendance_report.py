@@ -1211,9 +1211,17 @@ class HighlightSheetWriter(BaseSheetWriter):
         for group in self.groups:
             for meeting in group:
                 unidentifiable.update(meeting.unidentifiable)
+        if not unidentifiable:
+            self.write_cell(
+                row=self.cur_row,
+                col=1,
+                value="All students were matched. No missing students"
+            )
+            return
         start_block = copy(self.cur_row)
         cur_col = 1
         n = len(unidentifiable) // 10
+        n = n if n > 1 else 1
         for i, name in enumerate(unidentifiable):
             i += 1
             # every n rows, move one column over and fill the same row range
