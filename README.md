@@ -165,15 +165,8 @@ This is the primary top-level function – the one that is called by passing
 "clock" as a single argument to the shell. It takes into consideration the time
 of day, cached clock state, and real site state, and makes a determination about
 whether to press the button or not. It then updates the clock state and closes
-the headless browser.
-
-**`self.login(self)`**
-
-Launch headless chrome and login to paychex. Unless you setup the Imap module
-to get your OTP from your email, you will have to input it. This method does
-not necessarily need to be called, because functions that require you to login
-are protected by the `@login_first` decorator, which checks for `self.is_logged_in`
-and calls this method if not.
+the headless browser. It will be cautious and ask the user to confirm if they
+are trying to clock out in the morning or clock in in the afternoon.
 
 **`self.clock_in(self)`**
 
@@ -188,21 +181,6 @@ close the borwser if you're already clocked in. Either way,
 **`self.clock_out(self)`**
 
 Same as clock in, but clock out.
-
-**`self.get_clock_state(self)`**
-
-This returns the **LOCALLY CACHED** clock state. Can be used to check whether
-the Browser should be opened, or to query the user for whether they want to
-clock in or out when it's ambiguous.
-
-**`self.set_clock_state(self)`**
-
-This opens the browser, logs in, and gets the clock state from the website.
-It does not take any arguments, or allow the state to by manually overridden.
-
-**`@ login_first` decorator**
-
-These methods will check whether `self.is_logged_in` is true.
 
 <h1 id="classroom-automator">pyautogc</h1>
 
