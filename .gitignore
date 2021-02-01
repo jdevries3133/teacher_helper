@@ -12,16 +12,14 @@ flipgrid
 clock_state.txt
 *secret*
 ./data/*
-tags
 venv
 .vscode/
 .idea/
-docs
 smg_links
 manual_zoom_matches.py
 Session.vim
+tags
 NOTES.md
-debug.py
 dist/
 build/
 *.egg-info
