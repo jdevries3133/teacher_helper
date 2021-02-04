@@ -6,7 +6,6 @@ from .util import PaychexSeleniumUtils
 
 CLOCK_STATE_FILE = os.path.join(
     os.path.dirname(__file__), 'clock_state.txt')
-CHROME_DRIVER_PATH = os.path.join(os.path.dirname(__file__), 'chromedriver')
 
 
 def login_first(func):
@@ -22,13 +21,8 @@ class Paychex(PaychexSeleniumUtils):
     Clock in and out of paychex from the terminal using selenium. Keep track
     of whether the function has been called today, and issue a reminder if not.
 
-    /var/log/Paychex/clock_state.txt is used to keep track of whether I am
-    currently clocked in our out.
-
-    ALWAYS
-
-    Note: After login, the web driver is left with the inner html document
-    selected.
+    clock_state.txt is used to keep track of whether I am currently clocked in
+    our out.
     """
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
