@@ -26,6 +26,10 @@ class ShellUtils:
 
     def __init__(self, args):
         self.args = args
+        # emp new fix
+        if len(self.args) > 1 and self.args[1] == 'new':
+            self.helper = Helper()
+            return
         self.helper = self.check_cache()  # will print help if cache doesn't exist
 
     def route(self):
