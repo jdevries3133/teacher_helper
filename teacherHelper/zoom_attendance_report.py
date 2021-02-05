@@ -834,11 +834,11 @@ class WorkbookWriter:
 
 class BaseSheetWriter(DynamicDateColorer):
     def __init__(
-            self,
-            meeting_set: MeetingSet,
-            sheet,
-            start_row=1,
-            title='Sheet'
+        self,
+        meeting_set: MeetingSet,
+        sheet,
+        start_row=1,
+        title='Sheet'
     ):
         super().__init__()
         self.meeting_set = meeting_set
@@ -878,8 +878,9 @@ class MainSheetWriter(BaseSheetWriter):
     """
 
     def __init__(self, *a, **kw):
-        super().__init__(*a, **kw, title='Attendance by Dynamic Grouping')
+        super().__init__(*a, **kw)
 
+        self.sheet.title = 'Attendance by Dynamic Grouping'
         self.cur_meetings = []
         self.cur_group_students = []
         self.cur_headers = []
