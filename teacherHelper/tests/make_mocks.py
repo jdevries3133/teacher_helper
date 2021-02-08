@@ -5,7 +5,8 @@ Script to generate mock data.
 import csv
 from pathlib import Path
 from itertools import cycle
-from random import randint
+from typing import List
+import random
 
 from teacherHelper import Helper
 
@@ -22,21 +23,21 @@ def make_students_csv() -> list:
         ', '.join((n1[0], n2[1])) for n1, n2 in zip(names[:30], names[1:31])
     ]
     teacher_grade = {
-        teacher : f'{randint(4, 6)}th Grade'
+        teacher : f'{random.randint(4, 6)}th Grade'
         for teacher in teachers
     }
     rows = []
     for teacher, name in zip(cycle(teachers), names):
         first, last = name
         # Each row is:
-        # first, last, grade jevel, homeroom teacher, email, birthday
+        # first, last, grade level, homeroom teacher, email, birthday
         rows.append((
             first,
             last,
             teacher_grade[teacher],
             teacher,
             str(hash(first + last))[1:] + '@empacad.org',
-            f'{randint(1, 13)}/{randint(1,28)}/{randint(2005, 2010)}'
+            f'{random.randint(1, 13)}/{random.randint(1,28)}/{random.randint(2005, 2010)}'
         ))
     return rows
 
@@ -70,7 +71,7 @@ def make_parents_csv(students_csv_data: list):
         # fix any accidental duplicates
         while ' '.join(parent_name) in [' '.join(n) for n in names]:
             parent_name = (
-                names[randint(0, len(names) - 1)][0],
+                names[random.randint(0, len(names) - 1)][0],
                 parent_name[1]
             )
         rows.append([
@@ -79,22 +80,46 @@ def make_parents_csv(students_csv_data: list):
             student_row[1],                             # student last name
             'Y',                                        # is primary contact
             f'{str(hash(parent_name))[1:]}@gmail.com',  # email
-            str(randint(9730000000, 9739999999)),       # mobile phone
+            str(random.randint(9730000000, 9739999999)),       # mobile phone
             *[''] * 2,                                  # home & work phone
             str(hash(student_row)),                     # comments
-            ['Y', 'N'][randint(0, 1)],                  # allow contact
-            ['Y', 'N'][randint(0, 1)],                  # student resides with
+            ['Y', 'N'][random.randint(0, 1)],                  # allow contact
+            ['Y', 'N'][random.randint(0, 1)],                  # student resides with
             [
                 'Mother',
                 'Father',
                 'Other',
                 'Grandmother',
                 'Grandfather'
-            ][randint(0, 4)]                            # relation to student
+            ][random.randint(0, 4)]                            # relation to student
         ])
     return rows
 
-def make_zoom_reports(students_csv_data: list):
+def _generate_meeting(students_csv_data: list) -> List[str]:
+    """
+    Make a random meeting with 90% attendance.
+    """
+    rows = []
+    teacher = random.sample(
+        list(set(r[3] for r in students_csv_data)),
+        1,
+    )
+    students = [s for s in students_csv_data if s[3]  == teacher]
+    attendees = random.sample(students, int(len(students) * 0.9))
+    return rows
+
+def _random_class(students_csv_data: list) -> List[str]:
+    teacher = random.sample(students_csv_data, 1)[0][3]
+    return [s for s in students_csv_data if s[3] == teacher]
+
+def make_zoom_reports(students_csv_data: list) -> List[List[str]]:
     """
     Need to take the student data to make those students attend random zooms.
+    Return a list of 10 fake meetings
     """
+    # TODO: finish this function and its corresponding test
+    meetings = []
+    for _ in range(10):
+        students = _random_class(students_csv_data)
+        pass
+    return meetings

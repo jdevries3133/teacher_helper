@@ -7,6 +7,7 @@ from .make_mocks import (
     make_students_csv,
     make_parents_csv,
     make_zoom_reports,
+    _random_class
 )
 
 with open(
@@ -67,3 +68,22 @@ class TestMakeMocks(unittest.TestCase):
             assert parent_name not in teachers
         # two parents for each student
         assert len(parents) / 2 == len(students)
+
+    def test_random_class(self):
+        """
+        Test that students from a random class are actually all in the same
+        class and grade level.
+        """
+        students = make_students_csv()
+        class_ = _random_class(students)
+        for strow in class_:
+            assert strow[2] == class_[0][2]
+            assert strow[3] == class_[0][3]
+
+    def test_make_zoom_reports(self):
+        # TODO: finish this test and its corresponding function
+        return
+        students = make_students_csv()
+        reports = make_zoom_reports(students)
+        for report in reports:
+            pass
