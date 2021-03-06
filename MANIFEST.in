@@ -1,0 +1,3 @@
+include requirements.txt
+iclude LICENSE
+recursive-include teacherHelper/html_email_templates *.html
