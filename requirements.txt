@@ -33,9 +33,8 @@ pylint==2.6.0
 pyparsing==2.4.7
 pytest==6.1.0
 python-docx==0.8.10
-python-Levenshtein==0.12.0
+python-Levenshtein==0.12.1
 pytz==2020.1
-requests==2.24.0
 selenium==3.141.0
 six==1.15.0
 snowballstemmer==2.0.0
