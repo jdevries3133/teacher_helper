@@ -42,7 +42,8 @@ class Email:
         return self
 
     def __exit__(self, *_):
-        self.connection.close()
+        if self.connection:
+            self.connection.close()
 
     def send(self, *, to, subject, message: Union[Message, List[str]], cc=None, html=False):
         """

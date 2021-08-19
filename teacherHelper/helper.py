@@ -1,15 +1,22 @@
 import os
+from pathlib import Path
 import logging
 import dbm
 import shelve
+from typing import Union
 from datetime import datetime
 
 from fuzzywuzzy import process
 
+from .student import Student
 from .HelperMixins import OnCourseMixin, SillyMixin
 
-MODULE_DIR = os.path.dirname(__file__)
+DATA_DIR = Path(Path(__file__).parents[2], 'private')
 logger = logging.getLogger(__name__)
+
+
+class HelperError(Exception): ...
+class CacheError(HelperError): ...
 
 
 class Helper(OnCourseMixin, SillyMixin):
@@ -17,10 +24,7 @@ class Helper(OnCourseMixin, SillyMixin):
     Driver for the entire module! See README.md test
     """
 
-    def __init__(self, homerooms=None, students=None, groups=None):
-        for i in [homerooms, students, groups]:
-            if i and not isinstance(i, dict):
-                raise Exception()
+    def __init__(self, homerooms: dict, students: dict, groups: dict):
         super().__init__(homerooms, students, groups)
         self.homerooms = homerooms
         self.students = students
@@ -28,11 +32,11 @@ class Helper(OnCourseMixin, SillyMixin):
         self.cache_dir = os.path.join(__file__, 'cache')
 
     def write_cache(self):
-        with shelve.open(os.path.join(MODULE_DIR, 'cache'), 'c') as db:
+        with shelve.open(os.path.join(DATA_DIR, 'cache'), 'c') as db:
             db['data'] = self
             db['date'] = datetime.now()
 
-    def find_nearest_match(self, student_name: str, auto_yes=False, threshold=90, **kwargs):
+    def find_nearest_match(self, student_name: str, threshold=90, **_) -> Union[Student, None]:
         """
         Returns a student object. If auto_yes=True, it will presume that the
         best matching student is correct. Optionally, set a levenshtien distance
@@ -40,52 +44,20 @@ class Helper(OnCourseMixin, SillyMixin):
         """
         if not isinstance(student_name, str):
             raise Exception("Student name must be a string")
-        if not len(student_name.split(' ')) > 1 and auto_yes:
-            """
-            print(
-                'WARNING: If a student\'s full name is not provided, the query result '
-                'will likely have a low confidence and not pass the default '
-                'threshold value of 90. Lowering the threshold value will '
-                'greately increase the liklehood of incorrect matches. '
-                'Hence, it is best to provide the student\'s full name to this '
-                'function if auto_yes is set to true.\n\tThe name provded was:\t'
-                + student_name
-            )
-            """
+
         # direct match
         if st := self.students.get(student_name.title()):
             logger.debug(f'Exact match for {st.name}')
             return st
 
         # get nearest match
-        closest_name, confidence = process.extractOne(
-            student_name,
-            self.students.keys()
-        )
-
-        logger.debug(
-            f'{closest_name} is similar to {student_name} with a confidence of '
-            + str(confidence)
-        )
-        if auto_yes:
-            match = True
-        else:
-            match = self.match_in_terminal(student_name, closest_name)
-        if match and not auto_yes:
-            # allow match to pass regardless of thmatchhold if match was provided
-            # by user input
-            return self.students[closest_name]
-        if match and auto_yes:
-            if confidence > threshold:
-                logger.debug(
-                    f'Fuzzy match; {student_name} == {closest_name}::'
-                    f'confidence = {confidence}::threshold = {threshold}'
-                )
+        if result := process.extractOne(
+                student_name,
+                self.students.keys()
+        ):
+            closest_name, confidence = result[0], result[1]
+            if confidence >= threshold:
                 return self.students[closest_name]
-            logger.debug('Match rejected; confidence too low')
-        if not auto_yes:  # provide feedback to user
-            print('Student object not found. find_nearest_match will return None')
-        # None will be returned if no return conditions are met
 
     def exhaustive_search(self, name, subgroup=None, threshold=70):
         """
@@ -115,14 +87,14 @@ class Helper(OnCourseMixin, SillyMixin):
 
         # search each name part as each role
         for np in name_parts:
-            for type_ in ['last_name', 'first_name']:
+            for role in ('last_name', 'first_name'):
                 if (st := self.search_within_subgroup(np,
                                                       subgroup,
-                                                      name_part=type_,
+                                                      name_part=role,
                                                       threshold=threshold)):
-                    logger.debug(f'{name} matched with {st.name} by {type_}')
+                    logger.debug(f'{name} matched with {st.name} by {role}')
                     return st
-            logger.debug(f'{type_} subgroup search for {name} returned None')
+        logger.debug(f'Exhaustive search for {name} failed')
 
     def search_within_subgroup(self, name, subgroup: list, threshold=90, name_part='name'):
         """
@@ -165,6 +137,7 @@ class Helper(OnCourseMixin, SillyMixin):
 
         # we know the name is unique in the subgroup, so find the corresponding
         # Student object in the subgroup and return it.
+        # TODO: refactor
         for st in self.students.values():
 
             if not st in subgroup:
@@ -180,26 +153,13 @@ class Helper(OnCourseMixin, SillyMixin):
 
         return st
 
-    def match_in_terminal(self, a, b):
-        print('Do these names match? (y/n)')
-        print('-' * 80)
-        print(a, b, sep='\t', end="\n\n")
-        res = input()
-        if res.lower() in ['y', 'yes']:
-            return True
-        elif res.lower() in ['n', 'no']:
-            return False
-        else:
-            print('Please enter "y" or "n".')
-            return self.match_in_terminal(a, b)
-
     @ staticmethod
     def read_cache(check_date=True):
         """
         This static method returns a class because I like to break the rules.
         there's a reason for the rules; this garbage doesn't work
         """
-        with shelve.open(os.path.join(MODULE_DIR, 'cache'), 'r') as db:
+        with shelve.open(os.path.join(DATA_DIR, 'cache'), 'r') as db:
             data = db['data']
             date = db['date']
         if check_date and (datetime.now().month in range(9, 12) and date.month in range(1, 7)):
@@ -212,8 +172,19 @@ class Helper(OnCourseMixin, SillyMixin):
     @ staticmethod
     def cache_exists():
         try:
-            sh = shelve.open(os.path.join(MODULE_DIR, 'cache'), 'r')
+            sh = shelve.open(os.path.join(DATA_DIR, 'cache'), 'r')
             sh.close()
             return True
-        except dbm.error:
+        except dbm.error:  # type: ignore
             return False
+
+    @ staticmethod
+    def enforce_cache(meth):
+        """Cache must exist before decorated method can be called"""
+        def wrap(*a, **kw):
+            if not a[0].cache_exists:
+                raise CacheError(f'Cannot call {meth.__name__} without student '
+                                 'data cache.')
+            meth(*a, **kw)
+
+        return wrap
