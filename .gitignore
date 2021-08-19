@@ -1,26 +1,21 @@
-__pycache__
+# file types
 *.pyc
 *.db
 *.log
 *.csv
 *.xlsx
 *.pdf
-archive
-edpuzzle
-google_classrooms
-flipgrid
-clock_state.txt
-*secret*
-./data/*
-venv
-.vscode/
-.idea/
-smg_links
-manual_zoom_matches.py
+
+# store for sensitive data
+./private/*
+
 Session.vim
 tags
-NOTES.md
+.vscode/
+.idea/
+
 dist/
 build/
 *.egg-info
-cache
+__pycache__
+venv
