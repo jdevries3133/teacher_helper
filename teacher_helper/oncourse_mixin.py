@@ -2,8 +2,8 @@ import csv
 from os import PathLike
 from pathlib import Path
 
-from ..tools.csv_parser import IterCsv
-from ..entities import Homeroom, ParentGuardian, Student
+from .tools.csv_parser import IterCsv
+from .entities import Homeroom, ParentGuardian, Student
 
 
 class OnCourseDataError(Exception): ...

@@ -1,12 +1,11 @@
 import csv
 import unittest
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 from pathlib import Path
 
 from .make_mocks import (
     make_students_csv,
     make_parents_csv,
-    make_zoom_reports,
     _random_class
 )
 
@@ -18,7 +17,7 @@ with open(
     names = [r for r in rd]
 
 # smaller sample for fast test
-@ patch('teacherHelper.tests.make_mocks.names', names[:100])
+@ patch('teacher_helper.tests.make_mocks.names', names[:100])
 class TestMakeMocks(unittest.TestCase):
 
     def test_make_students_csv(self):
@@ -79,11 +78,3 @@ class TestMakeMocks(unittest.TestCase):
         for strow in class_:
             assert strow[2] == class_[0][2]
             assert strow[3] == class_[0][3]
-
-    def test_make_zoom_reports(self):
-        # TODO: finish this test and its corresponding function
-        return
-        students = make_students_csv()
-        reports = make_zoom_reports(students)
-        for report in reports:
-            pass

@@ -3,7 +3,7 @@
 import code
 import argparse
 
-from teacherHelper import Helper
+from .helper import Helper
 
 
 helper = Helper.read_cache() if Helper.cache_exists() else None

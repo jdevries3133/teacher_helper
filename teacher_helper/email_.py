@@ -72,7 +72,7 @@ class Email:
         else:
             raise TypeError(
                 f'Invalid message type: {type(message)}. Message must be of '
-                'type list or teacherHelper.email.Message'
+                'type list or teacher_helper.email.Message'
             )
         part1 = MIMEText(plain_text, 'plain')
         part2 = MIMEText(html, 'html')

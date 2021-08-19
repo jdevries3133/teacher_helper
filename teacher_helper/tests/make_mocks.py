@@ -3,13 +3,9 @@ Script to generate mock data.
 """
 
 import csv
-import os
 from pathlib import Path
 from itertools import cycle
-from typing import List
 import random
-
-from ..helper import Helper
 
 
 with open(Path(Path(__file__).parent, 'random_names.csv'), 'r') as csvf:
@@ -93,32 +89,3 @@ def make_parents_csv(students_csv_data: list):
             ][random.randint(0, 4)]                            # relation to student
         ])
     return rows
-
-def _generate_meeting(students_csv_data: list) -> List[str]:
-    """
-    Make a random meeting with 90% attendance.
-    """
-    rows = []
-    teacher = random.sample(
-        list(set(r[3] for r in students_csv_data)),
-        1,
-    )
-    students = [s for s in students_csv_data if s[3]  == teacher]
-    attendees = random.sample(students, int(len(students) * 0.9))
-    return rows
-
-def _random_class(students_csv_data: list) -> List[str]:
-    teacher = random.sample(students_csv_data, 1)[0][3]
-    return [s for s in students_csv_data if s[3] == teacher]
-
-def make_zoom_reports(students_csv_data: list) -> List[List[str]]:
-    """
-    Need to take the student data to make those students attend random zooms.
-    Return a list of 10 fake meetings
-    """
-    # TODO: finish this function and its corresponding test
-    meetings = []
-    for _ in range(10):
-        students = _random_class(students_csv_data)
-        pass
-    return meetings
