@@ -6,7 +6,7 @@ from pathlib import Path
 from .make_mocks import (
     make_students_csv,
     make_parents_csv,
-    _random_class
+    random_class
 )
 
 with open(
@@ -74,7 +74,7 @@ class TestMakeMocks(unittest.TestCase):
         class and grade level.
         """
         students = make_students_csv()
-        class_ = _random_class(students)
+        class_ = random_class(students)
         for strow in class_:
             assert strow[2] == class_[0][2]
             assert strow[3] == class_[0][3]
