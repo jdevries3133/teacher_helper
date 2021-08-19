@@ -13,7 +13,7 @@ some things that are actually useful!
 You can install this package via pip:
 
 ```bash
-pip install teacher_helper
+pip install teacherhelper
 ```
 
 ## Usage
@@ -50,41 +50,42 @@ define the path to this directory as an environment variable: `HELPER_DATA`.
 In that folder, you should put two `csv` files that contain the data you want
 to populate the module with: `students.csv` and `parents.csv`.
 
-`students.csv` should contain the following columns:
+`students.csv` should contain the following exact columns:
 
-- first name
-- last name
-- grade level
-- homeroom teacher
-- email
-- birth date
+- `first name`
+- `last name`
+- `grade level`
+- `homeroom teacher`
+- `email address 1`
+- `birth date`
 
-`guardians.csv` should contain the following columns:
+`guardians.csv` should contain the following exact columns:
 
-- first name
-- last name
-- student
-- primary contact
-- email
-- mobile phone
-- home phone
-- work phone
-- comments
-- allow contact
-- student resides with
-- relationship to student
+- `guardian first name`
+- `guardian last name`
+- `student first name`
+- `student last name`
+- `primary contact`
+- `guardian email address 1`
+- `guardian mobile phone`
+- `guardian phone`
+- `guardian work phone`
+- `comments`
+- `allow contact`
+- `student resides with`
+- `relation to student`
 
 ## Helper Class Methods
 
-### `find_nearest_match(self, student_name) -> Student | None`
+**`find_nearest_match(self, student_name) -> Student | None`**
 
 Lookup a student.
 
-### `find_parent(self, parent_name) -> Student | None`
+**`find_parent(self, parent_name) -> Student | None`**
 
 Lookup a student by parent name.
 
-### `exhaustive_search(self, name, subgroup: list[Student], threshold: int)`
+**`exhaustive_search(self, name, subgroup: list[Student], threshold: int)`**
 
 Search for a student within a subgroup. This helps for dealing with data that
 is gnarly, misspelled, or incomplete. If you know that you are processing
