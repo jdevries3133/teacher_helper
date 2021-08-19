@@ -39,7 +39,6 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         '--new',
-        '-n',
         action='store_const',
         const=True,
         help=('Regenerate the database by parsing student.csv and parent.csv '

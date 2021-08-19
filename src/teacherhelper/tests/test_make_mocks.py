@@ -17,7 +17,7 @@ with open(
     names = [r for r in rd]
 
 # smaller sample for fast test
-@ patch('teacher_helper.tests.make_mocks.names', names[:100])
+@ patch('teacherhelper.tests.make_mocks.names', names[:100])
 class TestMakeMocks(unittest.TestCase):
 
     def test_make_students_csv(self):

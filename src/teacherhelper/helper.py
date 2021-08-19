@@ -61,7 +61,7 @@ class Helper(OnCourseMixin):
             if confidence >= threshold:
                 return self.students[closest_name]
 
-    def find_parent(self, name):
+    def find_parent(self, parent_name):
         # create dict of guardians & primary_contacts
         all_guardians = {}
         primary_contacts = {}
@@ -76,7 +76,7 @@ class Helper(OnCourseMixin):
 
         # prefer match amongst primary contacts
         primary_match = process.extractOne(
-            name,
+            parent_name,
             [g.name for g in primary_contacts.values()]
         )
         if primary_match and primary_match[1] > 85:
@@ -85,7 +85,7 @@ class Helper(OnCourseMixin):
 
         # search all parents and guardians otherwise
         name_match = process.extractOne(
-            name,
+            parent_name,
             [g.name for g in all_guardians.values()]
         )
         if name_match and (mo := all_guardians.get(name_match[0])):
