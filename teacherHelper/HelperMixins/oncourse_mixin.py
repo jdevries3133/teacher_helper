@@ -53,8 +53,8 @@ class OnCourseMixin:
                 get_item('birth date'),
             )
             # convert grade to int
-            for i in [4, 5, 6]:
-                if grade.find(str(i)) != -1:
+            for i in [4, 5, 6, 7]:
+                if str(i) in grade:
                     grade = i
                     break
             student = Student(

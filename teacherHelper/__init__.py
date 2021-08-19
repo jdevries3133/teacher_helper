@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 from .email_ import Email
 from .helper import Helper
@@ -13,7 +12,7 @@ REQUIRED_VARS = [
 
 for var in REQUIRED_VARS:
     if not os.getenv(var):
-        raise Warning(
+        print(
             f'Environment variable {var} is missing, which is necessary for '
             'certain functions within this module.'
         )

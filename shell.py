@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """
 Access the teacher_helper module functionality through a command line
 interface. Invoke directly from within an activated virtual environment,
