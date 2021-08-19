@@ -9,9 +9,9 @@ from datetime import datetime
 from fuzzywuzzy import process
 
 from .entities import Student
-from .HelperMixins import OnCourseMixin, SillyMixin
+from .HelperMixins import OnCourseMixin
 
-DATA_DIR = Path(Path(__file__).parents[2], 'private')
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,20 +19,22 @@ class HelperError(Exception): ...
 class CacheError(HelperError): ...
 
 
-class Helper(OnCourseMixin, SillyMixin):
+class Helper(OnCourseMixin):
     """
     Driver for the entire module! See README.md test
     """
 
+    DATA_DIR = (os.getenv('HELPER_DATA')
+                or Path(Path(__file__).parents[1], 'private'))
+
     def __init__(self, homerooms: dict, students: dict, groups: dict):
-        super().__init__(homerooms, students, groups)
         self.homerooms = homerooms
         self.students = students
         self.groups = groups
         self.cache_dir = os.path.join(__file__, 'cache')
 
     def write_cache(self):
-        with shelve.open(os.path.join(DATA_DIR, 'cache'), 'c') as db:
+        with shelve.open(os.path.join(self.DATA_DIR, 'cache'), 'c') as db:
             db['data'] = self
             db['date'] = datetime.now()
 
@@ -58,6 +60,36 @@ class Helper(OnCourseMixin, SillyMixin):
             closest_name, confidence = result[0], result[1]
             if confidence >= threshold:
                 return self.students[closest_name]
+
+    def find_parent(self, name):
+        # create dict of guardians & primary_contacts
+        all_guardians = {}
+        primary_contacts = {}
+        for st in self.students.values():
+            try:
+                primary = st.primary_contact
+                primary_contacts.setdefault(primary.name, primary)
+            except AttributeError:
+                pass
+            for g in st.guardians:
+                all_guardians.setdefault(g.name, g)
+
+        # prefer match amongst primary contacts
+        primary_match = process.extractOne(
+            name,
+            [g.name for g in primary_contacts.values()]
+        )
+        if primary_match and primary_match[1] > 85:
+            if mo :=  primary_contacts.get(primary_match[0]):
+                return mo.student
+
+        # search all parents and guardians otherwise
+        name_match = process.extractOne(
+            name,
+            [g.name for g in all_guardians.values()]
+        )
+        if name_match and (mo := all_guardians.get(name_match[0])):
+            return mo.student
 
     def exhaustive_search(self, name, subgroup=None, threshold=70):
         """
@@ -153,38 +185,28 @@ class Helper(OnCourseMixin, SillyMixin):
 
         return st
 
-    @ staticmethod
-    def read_cache(check_date=True):
+    @ classmethod
+    def read_cache(cls, check_date=True):
         """
         This static method returns a class because I like to break the rules.
         there's a reason for the rules; this garbage doesn't work
         """
-        with shelve.open(os.path.join(DATA_DIR, 'cache'), 'r') as db:
-            data = db['data']
+        with shelve.open(os.path.join(cls.DATA_DIR, 'cache'), 'r') as db:
+            cls = db['data']
             date = db['date']
         if check_date and (datetime.now().month in range(9, 12) and date.month in range(1, 7)):
             raise Exception(
                 'It appears that the cache is from last school year. Please\n'
                 'provide new data, re-instantiate, and re-write cache.'
             )
-        return data
+        return cls
 
     @ staticmethod
     def cache_exists():
         try:
-            sh = shelve.open(os.path.join(DATA_DIR, 'cache'), 'r')
+            sh = shelve.open(os.path.join(Helper.DATA_DIR, 'cache'), 'r')
             sh.close()
             return True
         except dbm.error:  # type: ignore
             return False
 
-    @ staticmethod
-    def enforce_cache(meth):
-        """Cache must exist before decorated method can be called"""
-        def wrap(*a, **kw):
-            if not a[0].cache_exists:
-                raise CacheError(f'Cannot call {meth.__name__} without student '
-                                 'data cache.')
-            meth(*a, **kw)
-
-        return wrap

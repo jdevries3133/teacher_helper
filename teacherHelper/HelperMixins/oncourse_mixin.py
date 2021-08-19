@@ -1,4 +1,6 @@
 import csv
+from os import PathLike
+from pathlib import Path
 
 from ..tools.csv_parser import IterCsv
 from ..entities import Homeroom, ParentGuardian, Student
@@ -8,18 +10,18 @@ class OnCourseDataError(Exception): ...
 
 
 class OnCourseMixin:
-    def __init__(self, homerooms=None, students=None, groups=None):
-        self.homerooms = homerooms
-        self.students = students
-        self.groups = groups
+
+    DATA_DIR: PathLike
 
     @classmethod
-    def new_school_year(cls, student_data, guardian_data, strict_headers=False):
+    def new_school_year(cls):
         """
         Instantiates guardians as an attribute of students. All guardians will
         never (as far as I can think) need to be accessed together, so they
         are not an attribute of the helper class.
         """
+        student_data = Path(cls.DATA_DIR, 'students.csv')
+        guardian_data = Path(cls.DATA_DIR, 'parents.csv')
         STUDENTS = {}
         HOMEROOMS = {}
 
@@ -30,10 +32,10 @@ class OnCourseMixin:
             'last name',
             'grade level',
             'homeroom teacher',
-            'email address',
+            'email address 1',
             'birth date',
         ]
-        for get_item in IterCsv(acceptable_headers, rows, strict=strict_headers):
+        for get_item in IterCsv(acceptable_headers, rows):
             (
                 first,
                 last,
@@ -46,7 +48,7 @@ class OnCourseMixin:
                 get_item('last name'),
                 get_item('grade level'),
                 get_item('homeroom teacher'),
-                get_item('email address'),
+                get_item('email address 1'),
                 get_item('birth date'),
             )
             # convert grade to int
@@ -75,8 +77,8 @@ class OnCourseMixin:
                 HOMEROOMS[homeroom].students.append(student)
 
         # instantiation
-        self = cls(
-            HOMEROOMS, STUDENTS
+        self = cls(  # type: ignore
+            HOMEROOMS, STUDENTS, {}
         )
         with open(guardian_data, 'r', encoding='utf8') as csvfile:
             rows = [r for r in csv.reader(csvfile)]
@@ -86,7 +88,7 @@ class OnCourseMixin:
             'student first name',
             'student last name',
             'primary contact',
-            'guardian email address',
+            'guardian email address 1',
             'guardian mobile phone',
             'guardian phone',
             'guardian work phone',
@@ -95,7 +97,7 @@ class OnCourseMixin:
             'student resides with',
             'relation to student'
         ]
-        for get_item in IterCsv(acceptable_headers, rows, strict=strict_headers):
+        for get_item in IterCsv(acceptable_headers, rows):
             raw_context = {
                 'first_name': get_item('guardian first name'),
                 'last_name': get_item('guardian last name'),
@@ -103,7 +105,7 @@ class OnCourseMixin:
                             + ' '
                             + get_item('student last name'),
                 'primary_contact': get_item('primary contact'),
-                'email': get_item('guardian email address'),
+                'email': get_item('guardian email address 1'),
                 'mobile_phone': get_item('guardian mobile phone'),
                 'home_phone': get_item('guardian phone'),
                 'work_phone': get_item('guardian work phone'),
@@ -114,7 +116,7 @@ class OnCourseMixin:
             }
             clean_context = {}
             # find student object match
-            student = self.find_nearest_match(
+            student = self.find_nearest_match(  # type: ignore
                 raw_context['student'],
             )
             if not student:

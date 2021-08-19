@@ -1,8 +1,11 @@
+from difflib import ndiff
+
+
 class IterCsvError(Exception): ...
 
 
 class IterCsv:
-    def __init__(self, acceptable_headers, rows, strict=True, strip_data=True):
+    def __init__(self, acceptable_headers, rows, strip_data=True):
         """
         Generator returns context, and row. Context is a dict in which
         the key is one of the acceptable headers, and the value is the
@@ -12,7 +15,6 @@ class IterCsv:
         self.rows = rows
         self.context = {}
         self._acceptable_headers = acceptable_headers
-        self._strict = strict
         self._strip_data = strip_data
         self._assign_context()
 
@@ -22,26 +24,22 @@ class IterCsv:
         for i, raw_header in enumerate(self.rows[0]):
             raw_header = raw_header.lower()
             for clean_header in self._acceptable_headers:
-                if not self._strict and clean_header in raw_header or raw_header in clean_header:
+                if clean_header == raw_header:
+                    # create mapping and check for duplicate match
                     before = len(self.context)
                     self.context[clean_header] = i
                     after = len(self.context)
                     if before == after:
-                        raise Exception(
-                            'Two headers matched the acceptable_header:\t'
-                            + clean_header
-                            + '\nIf raw header matching is to lenient, set strict=True'
-                        )
-                elif self._strict and clean_header == raw_header:
-                    before = len(self.context)
-                    self.context[clean_header] = i
-                    after = len(self.context)
-                    if before == after:
-                        raise Exception(
-                            'There are two or more headers with the value'
-                            f'{raw_header}. Edit the csv to differentiate'
+                        raise IterCsvError(
+                            'There are two or more headers with the value '
+                            f'{raw_header}. Edit the csv to differentiate '
                             'between these columns to continue.'
                         )
+        if not (a := list(self.context.keys())) == (b := self._acceptable_headers):
+            diff = '\n\t'.join(ndiff(a, b))
+            msg = ('A match was not found for all headers:\n'
+                   f'DIFF:\n\t{diff}')
+            raise IterCsvError(msg)
         self._validate_context(self.context)
 
     def fetch(self, name: str):

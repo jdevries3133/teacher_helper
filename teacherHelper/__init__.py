@@ -1,9 +1,6 @@
 import os
 
-from .email_ import Email
 from .helper import Helper
-from .student import Student
-
 
 REQUIRED_VARS = [
     'EMAIL_USERNAME',
