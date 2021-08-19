@@ -6,8 +6,7 @@ from ..homeroom import Homeroom
 from ..parent_guardian import ParentGuardian
 
 
-class OnCourseBooleanConversionError(Exception):
-    pass
+class OnCourseDataError(Exception): ...
 
 
 class OnCourseMixin:
@@ -119,12 +118,11 @@ class OnCourseMixin:
             # find student object match
             student = self.find_nearest_match(
                 raw_context['student'],
-                auto_yes=True
             )
             if not student:
                 continue
             if student.name != raw_context['student']:
-                raise Exception(
+                raise OnCourseDataError(
                     f"Integrity error. {student.name} does not equal "
                     + raw_context['student']
                 )
@@ -158,7 +156,7 @@ class OnCourseMixin:
                     elif 'N' in v:
                         v = False
                     else:
-                        raise OnCourseBooleanConversionError(
+                        raise OnCourseDataError(
                             f'Supposedly boolean field {k} could not'
                             'be converted into a boolean value.'
                         )
