@@ -8,7 +8,7 @@ from datetime import datetime
 
 from fuzzywuzzy import process
 
-from .student import Student
+from .entities import Student
 from .HelperMixins import OnCourseMixin, SillyMixin
 
 DATA_DIR = Path(Path(__file__).parents[2], 'private')

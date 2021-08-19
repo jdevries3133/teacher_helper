@@ -1,9 +1,7 @@
 import csv
 
 from ..tools.csv_parser import IterCsv
-from ..student import Student
-from ..homeroom import Homeroom
-from ..parent_guardian import ParentGuardian
+from ..entities import Homeroom, ParentGuardian, Student
 
 
 class OnCourseDataError(Exception): ...
