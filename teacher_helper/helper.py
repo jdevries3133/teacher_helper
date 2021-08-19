@@ -9,7 +9,7 @@ from datetime import datetime
 from fuzzywuzzy import process
 
 from .entities import Student
-from .HelperMixins import OnCourseMixin
+from .oncourse_mixin import OnCourseMixin
 
 
 logger = logging.getLogger(__name__)
