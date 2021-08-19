@@ -3,17 +3,16 @@ Script to generate mock data.
 """
 
 import csv
+import os
 from pathlib import Path
 from itertools import cycle
 from typing import List
 import random
 
-from teacherHelper import Helper
+from ..helper import Helper
 
-with open(
-    Path(Path(__file__).parent, 'mock_data', 'random_names.csv'),
-    'r'
-) as csvf:
+
+with open(Path(Path(__file__).parent, 'random_names.csv'), 'r') as csvf:
     rd = csv.reader(csvf)
     names = [r for r in rd]
 

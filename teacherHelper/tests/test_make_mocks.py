@@ -11,7 +11,7 @@ from .make_mocks import (
 )
 
 with open(
-    Path(Path(__file__).parent, 'mock_data', 'random_names.csv'),
+    Path(Path(__file__).parent, 'random_names.csv'),
     'r'
 ) as csvf:
     rd = csv.reader(csvf)
