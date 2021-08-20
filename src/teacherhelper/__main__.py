@@ -25,7 +25,7 @@ def shell():
     })
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--student',
@@ -55,3 +55,7 @@ if __name__ == '__main__':
         find_parent(args.parent)
     else:
         shell()
+
+
+if __name__ == '__main__':
+    main()

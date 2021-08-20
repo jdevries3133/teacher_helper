@@ -19,11 +19,16 @@ build:
 
 clean:
 	find . | grep egg-info$ | xargs rm -rfd
-	rm -r dist
+	rm -fr dist
 
 dist-production: clean build test
 	twine upload dist/*
 
-dist-test: clean build test
-	twine upload --repository testpypi dist/*
+dist-test:
+	if [![ $(git diff --quiet) ]]; then \
+		echo "Fatal: working tree is not clean"; \
+		exit 1; \
+	fi \
+
+	# twine upload --repository testpypi dist/*
 
