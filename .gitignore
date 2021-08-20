@@ -1,21 +1,20 @@
 # file types
-*.pyc
 *.db
 *.log
 *.csv
 *.xlsx
 *.pdf
 
-# store for sensitive data
-./private/*
-
+# editor
 Session.vim
 tags
 .vscode/
 .idea/
 
+# python
 dist/
 build/
 *.egg-info
 __pycache__
+*.pyc
 venv
