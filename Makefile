@@ -40,6 +40,6 @@ check-worktree:
 dist-production: clean check-worktree build test
 	$(TWINE) upload dist/*
 
-dist-test: clean check-worktree build test
+dist-test: clean build test
 	$(TWINE) upload --repository testpypi dist/*
 
