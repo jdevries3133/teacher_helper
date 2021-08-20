@@ -1,7 +1,10 @@
 PY=python3
-TESTER=pytest
-BUILDER=python3 -m build
 VENVDIR=venv
+WITH_VENV=source $(VENVDIR)/bin/activate
+
+TWINE=$(WITH_VENV) && twine
+TESTER=$(WITH_VENV) && pytest
+BUILDER=$(WITH_VENV) && python3 -m build
 
 .PHONY: venv
 
@@ -13,7 +16,7 @@ venv:
 		exit 0; \
 	fi; \
 	$(PY) -m venv $(VENVDIR) && \
-	source $(VENVDIR)/bin/activate && \
+	$(WITH_VENV) && \
 	pip install --upgrade pip && \
 	pip install -r requirements.txt
 
@@ -29,14 +32,14 @@ clean:
 
 check-worktree:
 	git diff --quiet --exit-code; \
-	if [[ $? -ne 0 ]]; then \
+	if [[ $$? -ne 0 ]]; then \
 		echo "Fatal: working tree is not clean"; \
 		exit 1; \
 	fi
 
 dist-production: clean check-worktree build test
-	twine upload dist/*
+	$(TWINE) upload dist/*
 
 dist-test: clean check-worktree build test
-	twine upload --repository testpypi dist/*
+	$(TWINE) upload --repository testpypi dist/*
 
