@@ -84,7 +84,7 @@ if result:
 There is no formal documentation besides this README. After my latest late
 summer razing of the not-so-useful parts of the library, pretty little is
 left! Please [review the source code on GitHub
-](https://github.com/jdevries3133/teacherhelper) to learn more.
+](https://github.com/jdevries3133/teacher_helper) to learn more.
 
 ## Initial Setup via `th --new`
 
