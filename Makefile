@@ -1,34 +1,42 @@
 PY=python3
 TESTER=pytest
 BUILDER=python3 -m build
+VENVDIR=venv
 
+.PHONY: venv
 
-all: venv test
+all: venv
 
 venv:
-	$(PY) -m venv venv && \
-	source venv/bin/activate && \
+	@if [[ -d "$(VENVDIR)" ]]; then \
+		echo "venv already exists"; \
+		exit 0; \
+	fi; \
+	$(PY) -m venv $(VENVDIR) && \
+	source $(VENVDIR)/bin/activate && \
 	pip install --upgrade pip && \
 	pip install -r requirements.txt
 
-test:
+test: venv
 	$(TESTER)
 
-build:
+build: venv
 	$(BUILDER)
 
 clean:
 	find . | grep egg-info$ | xargs rm -rfd
 	rm -fr dist
 
-dist-production: clean build test
-	twine upload dist/*
-
-dist-test:
-	if [![ $(git diff --quiet) ]]; then \
+check-worktree:
+	git diff --quiet --exit-code; \
+	if [[ $? -ne 0 ]]; then \
 		echo "Fatal: working tree is not clean"; \
 		exit 1; \
-	fi \
+	fi
 
-	# twine upload --repository testpypi dist/*
+dist-production: clean check-worktree build test
+	twine upload dist/*
+
+dist-test: clean check-worktree build test
+	twine upload --repository testpypi dist/*
 
