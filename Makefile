@@ -21,7 +21,7 @@ test: venv
 	$(TESTER)
 
 build: venv
-	$(BUILDER)
+	source $(VENVDIR)/bin/activate && $(BUILDER)
 
 clean:
 	find . | grep egg-info$ | xargs rm -rfd
@@ -29,7 +29,7 @@ clean:
 
 check-worktree:
 	git diff --quiet --exit-code; \
-	if [[ $? -ne 0 ]]; then \
+	if [[ $$? -ne 0 ]]; then \
 		echo "Fatal: working tree is not clean"; \
 		exit 1; \
 	fi
