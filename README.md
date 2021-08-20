@@ -18,37 +18,81 @@ pip install teacherhelper
 
 ## Usage
 
-Once installed, the `th` command provides the following CLI utilities:
+Once installed, the `th` command provides the following CLI utility:
 
-    Supported commands:
+```
+usage: th [-h] [--student STUDENT] [--parent PARENT] [--new]
 
-    --student -s [name]
-        Prints the student according to Student.__str__(). Provides basic
-        student and guardian information.
+optional arguments:
+  -h, --help            show this help message and exit
+  --student STUDENT, -s STUDENT
+                        Lookup a student and print the result
+  --parent PARENT, -p PARENT
+                        Lookup a parent and print the result
+  --new                 Regenerate the database by parsing student.csv and parent.csv in the $HELPER_DATA directory.
+```
 
-    --parent -p [parent/guardian name]
-        Prints the student just like in student search, but search by
-        parent instead of by student. Search algorithm prioritizes primary
-        contacts; so a fuzzy string match with a primary contact at a
-        lower confidence will be returned over a better match against a
-        secondary contact.
+## API
 
-    --new
-        Will refresh the cache by loading in spreadsheets at
-        `./data/students.csv` and `./data/parents.csv`.
+The `Helper` object provides an object oriented interface for accessing
+the imported data as well as sending emails if the optional `EMAIL_USERNAME`
+and `EMAIL_PASSWORD` environment variables are set. This makes any kind of
+scripting involving school information much more accessible.
 
-    [no arguments]
-        Run this script with no arguments, and it will enter the shell mode.
-        Here, the helper object is instantiated in the local namespace with
-        the variable name "helper".
+```python
+import teacherhelper
 
-## Initial Setup
+name = 'tommey'  # Timmy needs a typing lesson
+
+# the classmethod read_cache instantiates the helper object with all the
+# data previously imported and cached with `th --new`.
+helper = teacherhelper.Helper.read_cache()
+
+result = helper.find_nearest_match(name)  # returns Student | None
+if result:
+    print(result)
+else:
+    print(f'{name} not found')
+
+# there is also an `exhaustive_search` method which allows you to search within
+# subgroups of students at a lower confidence level, allowing dirtier data to
+# be more usable if you know that you are looking at a particular homeroom,
+# for example
+name = 'toezmmy'  # come on Tommy
+tommy_homeroom = helper.homerooms["Tommy's Teacher"].students
+result = helper.exhaustive_search(name, tommy_homeroom, threshold=40)
+if result:
+    print(result)
+else:
+    print(f'{name} not found')
+
+# finally, Helper has a find_parent function, which returns a *student*
+# by searching for the parent's name
+parent = 'Lisa Tommymom'
+result = helper.find_parent(name)
+if result:
+    # the method still returns a student object! This is usually what you want
+    assert isinstance(result, teacherhelper.entities.Student)
+
+    # you can still refer back to the parent from the student
+    parent_name = result.primary_contact.name
+    parent_email = result.primary_contact.email
+```
+
+### Extensive Documentation
+
+There is no formal documentation besides this README. After my latest late
+summer razing of the not-so-useful parts of the library, pretty little is
+left! Please [review the source code on GitHub
+](https://github.com/jdevries3133/teacherhelper) to learn more.
+
+## Initial Setup via `th --new`
 
 The module will work with data in one directory of your machine. You should
 define the path to this directory as an environment variable: `HELPER_DATA`.
 
 In that folder, you should put two `csv` files that contain the data you want
-to populate the module with: `students.csv` and `parents.csv`.
+to populate the module with: `students.csv` and `guardians.csv`.
 
 `students.csv` should contain the following exact columns:
 
@@ -74,27 +118,3 @@ to populate the module with: `students.csv` and `parents.csv`.
 - `allow contact`
 - `student resides with`
 - `relation to student`
-
-## Helper Class Methods
-
-**`find_nearest_match(self, student_name) -> Student | None`**
-
-Lookup a student.
-
-**`find_parent(self, parent_name) -> Student | None`**
-
-Lookup a student by parent name.
-
-**`exhaustive_search(self, name, subgroup: list[Student], threshold: int)`**
-
-Search for a student within a subgroup. This helps for dealing with data that
-is gnarly, misspelled, or incomplete. If you know that you are processing
-data from some subgroup of students like a single homeroom, you can add
-that as a search parameter and also lower the confidence threshold, making
-it possible to get more matches:
-
-```python
-name = 'Tomme'  # Tommy needs a typing lesson
-subgroup = helper.homerooms['Smith']
-tommy_object = helper.exhaustive_search(name, subgroup, threshold=50)
-```
