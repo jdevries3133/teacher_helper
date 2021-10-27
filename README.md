@@ -16,6 +16,9 @@ You can install this package via pip:
 pip install teacherhelper
 ```
 
+Of course, there is some additional work involved in importing your school
+data. See [CORE.md.](./docs/CORE.md)
+
 ## Usage
 
 Once installed, the `th` command provides the following CLI utility:
@@ -40,15 +43,20 @@ and `EMAIL_PASSWORD` environment variables are set. This makes any kind of
 scripting involving school information much more accessible.
 
 ```python
-import teacherhelper
+from teacherhelper import Helper
 
-name = 'tommey'  # Timmy needs a typing lesson
+name = 'tommey'  # Timmy needs a typing lesson, but this library is great for
+                 # data bunging!
 
-# the classmethod read_cache instantiates the helper object with all the
-# data previously imported and cached with `th --new`.
-helper = teacherhelper.Helper.read_cache()
+# **************************************************
+# ==== Student Information System inside Python ====
+# **************************************************
 
-result = helper.find_nearest_match(name)  # returns Student | None
+# after following the setup steps in ./docs/CORE.md, this "just works," making
+# it super easy to interact with student information from any python script
+helper = Helper.read_cache()
+
+result = helper.find_nearest_match(name)  # -> Union[Student, None]
 if result:
     print(result)
 else:
@@ -66,55 +74,48 @@ if result:
 else:
     print(f'{name} not found')
 
-# finally, Helper has a find_parent function, which returns a *student*
-# by searching for the parent's name
+# the find_parent method, returns a *student* searched for by parent name
 parent = 'Lisa Tommymom'
 result = helper.find_parent(name)
 if result:
-    # the method still returns a student object! This is usually what you want
-    assert isinstance(result, teacherhelper.entities.Student)
-
-    # you can still refer back to the parent from the student
+    # you can still refer back to the parent from the student, if needed
     parent_name = result.primary_contact.name
     parent_email = result.primary_contact.email
+
+
+# **************************************************
+# ==== Send Emails Easily ====
+# **************************************************
+
+from teacherhelper import Email
+
+# don't forget our variables defined above
+tommy = result
+
+with Email(username="me@site.com", password="supersecret") as eml:
+    eml.send(
+        to=tommy.primary_conteact.email,
+        subject="Tommy Needs Spelling Help",
+
+        # the emailer supports markdown input, and will inject the resulting
+        # html into a default template, or a template that you can create!
+        message=f"""Hello Ms. {tommy.primary_contact.name},
+
+I noticed that {tommy.first_name} spelled his name like "tommey" on an
+assignment recently. Here are some spelling tools I would recommend:
+
+## List of Spelling Tools
+
+| Name                      | Website                          |
+| ------------------------- | -------------------------------- |
+| Khan Academy              | https://www.khanacademy.org/     |
+| Grammarly                 | https://www.grammarly.com/       |
+| Webster Dictionary Online | https://www.merriam-webster.com/ |
+"""
+        cc=result.email
+    )
 ```
 
-### Extensive Documentation
+## Setup and Additional Docs
 
-There is no formal documentation besides this README. After my latest late
-summer razing of the not-so-useful parts of the library, pretty little is
-left! Please [review the source code on GitHub
-](https://github.com/jdevries3133/teacher_helper) to learn more.
-
-## Initial Setup via `th --new`
-
-The module will work with data in one directory of your machine. You should
-define the path to this directory as an environment variable: `HELPER_DATA`.
-
-In that folder, you should put two `csv` files that contain the data you want
-to populate the module with: `students.csv` and `guardians.csv`.
-
-`students.csv` should contain the following exact columns:
-
-- `first name`
-- `last name`
-- `grade level`
-- `homeroom teacher`
-- `email address 1`
-- `birth date`
-
-`guardians.csv` should contain the following exact columns:
-
-- `guardian first name`
-- `guardian last name`
-- `student first name`
-- `student last name`
-- `primary contact`
-- `guardian email address 1`
-- `guardian mobile phone`
-- `guardian phone`
-- `guardian work phone`
-- `comments`
-- `allow contact`
-- `student resides with`
-- `relation to student`
+See ./docs

@@ -8,6 +8,8 @@ import os
 
 import markdown
 
+from ._data_dir import DATA_DIR
+
 
 class Email:
     def __init__(self, username=None, password=None):
@@ -16,9 +18,8 @@ class Email:
         self.connection = None
 
         # create ~/.teacherhelper/email_templates if needed
-        home_dir = os.path.expanduser('~')
         self.template_dir = Path(
-            home_dir,
+            DATA_DIR,
             '.teacherhelper',
             'email_templates'
         )
