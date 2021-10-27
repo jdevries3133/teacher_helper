@@ -1,4 +1,4 @@
-# TODO: refactor as dataclasses
+from datetime import datetime
 
 class EntityException(Exception): ...
 class ParentGuardianError(EntityException): ...
@@ -40,6 +40,7 @@ class Student:
         self.groups = context.get('groups')
         self.email = context.get('email')
         self.guardians = context.get('guardians')
+        # TODO: birthdays
         self.name = self.first_name + ' ' + self.last_name
         """
         primary_contact is an instance of ParentGuardian, which is assigned
