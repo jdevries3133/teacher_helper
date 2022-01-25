@@ -15,8 +15,12 @@ from .oncourse_mixin import OnCourseMixin
 logger = logging.getLogger(__name__)
 
 
-class HelperError(Exception): ...
-class CacheError(HelperError): ...
+class HelperError(Exception):
+    ...
+
+
+class CacheError(HelperError):
+    ...
 
 
 class Helper(OnCourseMixin):

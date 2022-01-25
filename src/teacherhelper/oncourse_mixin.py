@@ -6,9 +6,6 @@ from .tools.csv_parser import IterCsv
 from .entities import Homeroom, ParentGuardian, Student
 
 
-class OnCourseDataError(Exception): ...
-
-
 class OnCourseMixin:
 
     DATA_DIR: PathLike
@@ -121,8 +118,8 @@ class OnCourseMixin:
             )
             if not student:
                 continue
-            if student.name != raw_context['student']:
-                raise OnCourseDataError(
+            if student.name != raw_context["student"]:
+                raise ValueError(
                     f"Integrity error. {student.name} does not equal "
                     + raw_context['student']
                 )
@@ -156,9 +153,9 @@ class OnCourseMixin:
                     elif 'N' in v:
                         v = False
                     else:
-                        raise OnCourseDataError(
-                            f'Supposedly boolean field {k} could not'
-                            'be converted into a boolean value.'
+                        raise ValueError(
+                            f"Supposedly boolean field {k} could not"
+                            "be converted into a boolean value."
                         )
                     clean_context[k] = v
                 clean_context.setdefault(k, v)

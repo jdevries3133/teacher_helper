@@ -1,9 +1,3 @@
-from datetime import datetime
-
-class EntityException(Exception): ...
-class ParentGuardianError(EntityException): ...
-
-
 class Group:
     """
     Group class is used to manage groups for extracurricular activities, field
