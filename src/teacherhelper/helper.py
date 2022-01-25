@@ -28,21 +28,24 @@ class Helper(OnCourseMixin):
     Driver for the entire module! See README.md test
     """
 
-    DATA_DIR = (os.getenv('HELPER_DATA')
-                or Path(Path(__file__).parents[1], 'private'))
+    DATA_DIR = Path(
+        os.getenv("HELPER_DATA") or Path(Path(__file__).parents[1], "private")
+    )
 
     def __init__(self, homerooms: dict, students: dict, groups: dict):
         self.homerooms = homerooms
         self.students = students
         self.groups = groups
-        self.cache_dir = os.path.join(__file__, 'cache')
+        self.cache_dir = os.path.join(__file__, "cache")
 
     def write_cache(self):
-        with shelve.open(os.path.join(self.DATA_DIR, 'cache'), 'c') as db:
-            db['data'] = self
-            db['date'] = datetime.now()
+        with shelve.open(os.path.join(self.DATA_DIR, "cache"), "c") as db:
+            db["data"] = self
+            db["date"] = datetime.now()
 
-    def find_nearest_match(self, student_name: str, threshold=90, **_) -> Union[Student, None]:
+    def find_nearest_match(
+        self, student_name: str, threshold=90, **_
+    ) -> Union[Student, None]:
         """
         Returns a student object. If auto_yes=True, it will presume that the
         best matching student is correct. Optionally, set a levenshtien distance
@@ -53,14 +56,11 @@ class Helper(OnCourseMixin):
 
         # direct match
         if st := self.students.get(student_name.title()):
-            logger.debug(f'Exact match for {st.name}')
+            logger.debug(f"Exact match for {st.name}")
             return st
 
         # get nearest match
-        if result := process.extractOne(
-                student_name,
-                self.students.keys()
-        ):
+        if result := process.extractOne(student_name, self.students.keys()):
             closest_name, confidence = result[0], result[1]
             if confidence >= threshold:
                 return self.students[closest_name]
@@ -80,17 +80,15 @@ class Helper(OnCourseMixin):
 
         # prefer match amongst primary contacts
         primary_match = process.extractOne(
-            parent_name,
-            [g.name for g in primary_contacts.values()]
+            parent_name, [g.name for g in primary_contacts.values()]
         )
         if primary_match and primary_match[1] > 85:
-            if mo :=  primary_contacts.get(primary_match[0]):
+            if mo := primary_contacts.get(primary_match[0]):
                 return mo.student
 
         # search all parents and guardians otherwise
         name_match = process.extractOne(
-            parent_name,
-            [g.name for g in all_guardians.values()]
+            parent_name, [g.name for g in all_guardians.values()]
         )
         if name_match and (mo := all_guardians.get(name_match[0])):
             return mo.student
@@ -105,34 +103,33 @@ class Helper(OnCourseMixin):
         # try matching normally first with default threshold of 90
         st = self.find_nearest_match(name, auto_yes=True)
         if st:
-            logger.debug(f'Basic search for {name} returned {st.name}')
+            logger.debug(f"Basic search for {name} returned {st.name}")
             return st
-        logger.debug(f'Basic search for {name} returned None')
-        if (st := self.search_within_subgroup(name,
-                                              subgroup,
-                                              threshold=threshold)):
+        logger.debug(f"Basic search for {name} returned None")
+        if st := self.search_within_subgroup(name, subgroup, threshold=threshold):
             return st
-        logger.debug(f'Full name subgroup search for {name} returned None')
+        logger.debug(f"Full name subgroup search for {name} returned None")
 
-        if not ' ' in name:
+        if not " " in name:
             name_parts = [name]
         else:
-            name_parts = ' '.split(name)
+            name_parts = " ".split(name)
 
-        logger.debug(f'Searching through words {name_parts}')
+        logger.debug(f"Searching through words {name_parts}")
 
         # search each name part as each role
         for np in name_parts:
-            for role in ('last_name', 'first_name'):
-                if (st := self.search_within_subgroup(np,
-                                                      subgroup,
-                                                      name_part=role,
-                                                      threshold=threshold)):
-                    logger.debug(f'{name} matched with {st.name} by {role}')
+            for role in ("last_name", "first_name"):
+                if st := self.search_within_subgroup(
+                    np, subgroup, name_part=role, threshold=threshold
+                ):
+                    logger.debug(f"{name} matched with {st.name} by {role}")
                     return st
-        logger.debug(f'Exhaustive search for {name} failed')
+        logger.debug(f"Exhaustive search for {name} failed")
 
-    def search_within_subgroup(self, name, subgroup: list, threshold=90, name_part='name'):
+    def search_within_subgroup(
+        self, name, subgroup: list, threshold=90, name_part="name"
+    ):
         """
         subgroup should be a list of Student objects to search within. threshold
         is the confidence threshold. name_part is the part of the name that
@@ -140,35 +137,33 @@ class Helper(OnCourseMixin):
         'name' (full name). At a higher level, this allows more or less
         exhaustive searching by calling this function multiple times.
         """
-        logger.debug(f'Checking {name} as a {name_part}')
+        logger.debug(f"Checking {name} as a {name_part}")
         name_match = process.extract(
-            name,
-            [getattr(s, name_part) for s in subgroup],
-            limit=2
+            name, [getattr(s, name_part) for s in subgroup], limit=2
         )
 
         # Check whether name is unique within subgroup.
         if name_match[1][0] == name_match[0][0]:
             logger.debug(
-                f'Cannot proceed with {name}. More than one '
-                f'student in the subgroup has the first '
-                f'name {name_match[0][0]}.'
+                f"Cannot proceed with {name}. More than one "
+                f"student in the subgroup has the first "
+                f"name {name_match[0][0]}."
             )
 
         # check for confidence
         if name_match[0][1] < threshold:
             logger.debug(
-                f'{name_match[0][0]} rejected against {name} because the '
-                f'confidence of {name_match[0][1]} was below the threshold of '
+                f"{name_match[0][0]} rejected against {name} because the "
+                f"confidence of {name_match[0][1]} was below the threshold of "
                 + str(threshold)
             )
             return  # does not pass threshold
 
         name = name_match[0][0]
 
-        if name == 'name':  # shortcut for full name matches
-            if (st := self.students[name]):
-                logger.debug('Hit on full name match shortcut')
+        if name == "name":  # shortcut for full name matches
+            if st := self.students[name]:
+                logger.debug("Hit on full name match shortcut")
                 return st
 
         # we know the name is unique in the subgroup, so find the corresponding
@@ -183,34 +178,33 @@ class Helper(OnCourseMixin):
             if name in st.name:
                 break
 
-        logger.debug(
-            f'SUBGROUP MATCH {name} matches with {st.name} within subgroup.'
-        )
+        logger.debug(f"SUBGROUP MATCH {name} matches with {st.name} within subgroup.")
 
         return st
 
-    @ classmethod
+    @classmethod
     def read_cache(cls, check_date=True):
         """
         This static method returns a class because I like to break the rules.
         there's a reason for the rules; this garbage doesn't work
         """
-        with shelve.open(os.path.join(cls.DATA_DIR, 'cache'), 'r') as db:
-            cls = db['data']
-            date = db['date']
-        if check_date and (datetime.now().month in range(9, 12) and date.month in range(1, 7)):
+        with shelve.open(os.path.join(cls.DATA_DIR, "cache"), "r") as db:
+            cls = db["data"]
+            date = db["date"]
+        if check_date and (
+            datetime.now().month in range(9, 12) and date.month in range(1, 7)
+        ):
             raise Exception(
-                'It appears that the cache is from last school year. Please\n'
-                'provide new data, re-instantiate, and re-write cache.'
+                "It appears that the cache is from last school year. Please\n"
+                "provide new data, re-instantiate, and re-write cache."
             )
         return cls
 
-    @ staticmethod
+    @staticmethod
     def cache_exists():
         try:
-            sh = shelve.open(os.path.join(Helper.DATA_DIR, 'cache'), 'r')
+            sh = shelve.open(os.path.join(Helper.DATA_DIR, "cache"), "r")
             sh.close()
             return True
         except dbm.error:  # type: ignore
             return False
-

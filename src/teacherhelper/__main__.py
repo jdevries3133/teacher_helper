@@ -20,29 +20,25 @@ def find_parent(name):
 
 
 def shell():
-    code.interact(local={
-        'helper': helper,
-    })
+    code.interact(
+        local={
+            "helper": helper,
+        }
+    )
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--student", "-s", help="Lookup a student and print the result")
+    parser.add_argument("--parent", "-p", help="Lookup a parent and print the result")
     parser.add_argument(
-        '--student',
-        '-s',
-        help="Lookup a student and print the result"
-    )
-    parser.add_argument(
-        '--parent',
-        '-p',
-        help="Lookup a parent and print the result"
-    )
-    parser.add_argument(
-        '--new',
-        action='store_const',
+        "--new",
+        action="store_const",
         const=True,
-        help=('Regenerate the database by parsing student.csv and parent.csv '
-              'in the $HELPER_DATA directory.')
+        help=(
+            "Regenerate the database by parsing student.csv and parent.csv "
+            "in the $HELPER_DATA directory."
+        ),
     )
 
     args = parser.parse_args()
@@ -57,5 +53,5 @@ def main():
         shell()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

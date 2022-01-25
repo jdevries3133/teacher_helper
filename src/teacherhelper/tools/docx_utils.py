@@ -3,9 +3,9 @@ import re
 import docx
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
-def regex_search(st, doc, regex, near_match_regex=r''):
-    """
-    Iterates through all paragraphs, tables, and hyperlinks in a word doc, 
+
+def regex_search(st, doc, regex, near_match_regex=r""):
+    """Iterates through all paragraphs, tables, and hyperlinks in a word doc,
     and extracts any strings that match the regex and, optionally, the near
     match regex. It returns a list of match tuplets and miss tuplets:
         matches = [

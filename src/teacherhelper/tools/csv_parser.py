@@ -1,14 +1,11 @@
 from difflib import ndiff
 
 
-
 class IterCsv:
     def __init__(self, acceptable_headers, rows, strip_data=True):
-        """
-        Generator returns context, and row. Context is a dict in which
+        """Generator returns context, and row. Context is a dict in which
         the key is one of the acceptable headers, and the value is the
-        index at which that header field can be found in each row.
-        """
+        index at which that header field can be found in each row."""
         self.current_row = 0
         self.rows = rows
         self.context = {}
@@ -57,14 +54,14 @@ class IterCsv:
             return self.fetch
         raise StopIteration
 
-    @ staticmethod
+    @staticmethod
     def _validate_context(context):
         """Because this field is misspelled in OnCourse....."""
-        is_parent_spreadsheet = 'guardian first name' in context
-        is_header_misspelled = context.get('student resides with') is None
+        is_parent_spreadsheet = "guardian first name" in context
+        is_header_misspelled = context.get("student resides with") is None
 
         if is_parent_spreadsheet and is_header_misspelled:
             raise ValueError(
                 'Remember, "student resides with"  is misspelled in '
-                'OnCourse. Fix it in the CSV you downloaded.'
+                "OnCourse. Fix it in the CSV you downloaded."
             )
