@@ -17,7 +17,7 @@ pip install teacherhelper
 ```
 
 Of course, there is some additional work involved in importing your school
-data. See [CORE.md.](./docs/CORE.md)
+data. See [setup.md](./docs/setup.md)
 
 ## Usage
 
@@ -118,4 +118,4 @@ assignment recently. Here are some spelling tools I would recommend:
 
 ## Setup and Additional Docs
 
-See ./docs
+See [./docs](https://github.com/jdevries3133/teacher_helper/tree/main/docs)

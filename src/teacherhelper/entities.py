@@ -34,12 +34,24 @@ class Student:
         self.email = context.get("email")
         self.guardians = context.get("guardians")
         self.name = self.first_name + " " + self.last_name
-        """
-        primary_contact is an instance of ParentGuardian, which is assigned
-        during the parsing of parent / guardian data in the new_school_year
-        function within OnCourseMixin
-        """
+
+        # primary_contact is an instance of ParentGuardian, which is assigned
+        # during the parsing of parent / guardian data in the new_school_year
+        # function within OnCourseMixin
+        # TODO: assign attribute at init time, not later
         self.primary_contact = None
+
+    def __eq__(self, other):
+        if not isinstance(other, Student):
+            return False
+
+        if self.email is not None:
+            return self.email == other.email
+
+        if self.name is not None:
+            return self.name == other.name
+
+        raise ValueError('insufficient attributes to compare')
 
     def __str__(self, verbose=False):
         """
@@ -63,6 +75,10 @@ class Student:
         for gu in self.guardians[1:cutoff]:
             gu_data.append("\n\t".join(gu.__str__().split("\n")))
         return "\n".join(student_data + gu_data)
+
+    def __repr__(self):
+        normal = super().__repr__()
+        return normal.replace("object", f'"{self.name}" object')
 
 
 class ParentGuardian:

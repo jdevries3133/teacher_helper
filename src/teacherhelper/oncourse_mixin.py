@@ -1,7 +1,7 @@
 import csv
-from os import PathLike
 from pathlib import Path
 
+from ._data_dir import get_data_dir
 from .tools.csv_parser import IterCsv
 from .entities import Homeroom, ParentGuardian, Student
 
@@ -11,18 +11,39 @@ class OnCourseMixin:
     initializes the helper cache with the spreadsheet reports that I output
     from oncourse, using those specific headers"""
 
-    # provided by subclass
-    DATA_DIR: PathLike
 
     @classmethod
     def new_school_year(cls):
+        """Take a spreadsheet of student data and parent data, build the
+        necessary relationships.
+
+        Student data csv should include columns:
+
+        - first name
+        - last name
+        - grade level
+        - homeroom teacher
+        - email address 1
+        - birth date
+
+        Parent data csv should include:
+
+        - guardian first name
+        - guardian last name
+        - student first name
+        - student last name
+        - primary contact
+        - guardian email address 1
+        - guardian mobile phone
+        - guardian phone
+        - guardian work phone
+        - comments
+        - allow contact
+        - student resides with
+        - relation to student
         """
-        Instantiates guardians as an attribute of students. All guardians will
-        never (as far as I can think) need to be accessed together, so they
-        are not an attribute of the helper class.
-        """
-        student_data = Path(cls.DATA_DIR, "students.csv")
-        guardian_data = Path(cls.DATA_DIR, "parents.csv")
+        student_data = Path(get_data_dir(), "students.csv")
+        guardian_data = Path(get_data_dir(), "parents.csv")
         STUDENTS = {}
         HOMEROOMS = {}
 

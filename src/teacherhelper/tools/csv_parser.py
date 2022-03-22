@@ -1,6 +1,7 @@
 from difflib import ndiff
 
 
+# TODO: remove me. This is just a worse version of csv.DictReader
 class IterCsv:
     def __init__(self, acceptable_headers, rows, strip_data=True):
         """Generator returns context, and row. Context is a dict in which

@@ -9,7 +9,7 @@ from typing import Union
 
 import markdown
 
-from ._data_dir import DATA_DIR
+from ._data_dir import get_data_dir
 
 
 class Email:
@@ -19,7 +19,7 @@ class Email:
         self.connection = None
 
         # create ~/.teacherhelper/email_templates if needed
-        self.template_dir = Path(DATA_DIR, ".teacherhelper", "email_templates")
+        self.template_dir = get_data_dir() / ".teacherhelper" / "email_templates"
         if not self.template_dir.exists():
             os.makedirs(self.template_dir)
         default_template = Path(self.template_dir, "default.html")
