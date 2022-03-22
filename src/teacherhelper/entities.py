@@ -51,7 +51,7 @@ class Student:
         if self.name is not None:
             return self.name == other.name
 
-        raise ValueError('insufficient attributes to compare')
+        raise ValueError("insufficient attributes to compare")
 
     def __str__(self, verbose=False):
         """

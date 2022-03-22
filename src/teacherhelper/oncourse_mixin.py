@@ -11,7 +11,6 @@ class OnCourseMixin:
     initializes the helper cache with the spreadsheet reports that I output
     from oncourse, using those specific headers"""
 
-
     @classmethod
     def new_school_year(cls):
         """Take a spreadsheet of student data and parent data, build the
