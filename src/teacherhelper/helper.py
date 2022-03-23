@@ -2,7 +2,7 @@ import os
 import logging
 import dbm
 import shelve
-from typing import Union, cast
+from typing import Union, cast, Dict
 from datetime import datetime
 
 from fuzzywuzzy import process
@@ -22,9 +22,9 @@ class Helper(OnCourseMixin):
 
     def __init__(
         self,
-        homerooms: dict[str, Homeroom],
-        students: dict[str, Student],
-        groups: dict[str, Group],
+        homerooms: Dict[str, Homeroom],
+        students: Dict[str, Student],
+        groups: Dict[str, Group],
     ):
         self.homerooms = homerooms
         self.students = students

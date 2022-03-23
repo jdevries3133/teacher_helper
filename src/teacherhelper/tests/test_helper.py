@@ -32,12 +32,15 @@ def helper(monkeypatch, students_csv, parents_csv):
 
 def test_write_cache(helper):
     helper.write_cache()
-    cache = get_data_dir() / "cache.db"
-    assert cache.exists()
+    cache = get_data_dir() / "cache"
+
+    # some file matching this pattern is in the folder. Different platforms
+    # will call it different things
+    assert any("cache" in str(i) for i in get_data_dir().iterdir())
 
     # the slice is because we need to change `cache.db` to just `cache` at
     # the end of the path for shelve
-    with shelve.open(str(cache)[:-3], "r") as db:
+    with shelve.open(str(cache), "r") as db:
         # `date` points to a datetime object
         assert isinstance(db["date"], datetime.datetime)
         date = cast(datetime.datetime, db["date"])
