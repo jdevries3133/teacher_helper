@@ -62,18 +62,6 @@ if result:
 else:
     print(f'{name} not found')
 
-# there is also an `exhaustive_search` method which allows you to search within
-# subgroups of students at a lower confidence level, allowing dirtier data to
-# be more usable if you know that you are looking at a particular homeroom,
-# for example
-name = 'toezmmy'  # come on Tommy
-tommy_homeroom = helper.homerooms["Tommy's Teacher"].students
-result = helper.exhaustive_search(name, tommy_homeroom, threshold=40)
-if result:
-    print(result)
-else:
-    print(f'{name} not found')
-
 # the find_parent method, returns a *student* searched for by parent name
 parent = 'Lisa Tommymom'
 result = helper.find_parent(name)

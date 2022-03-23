@@ -139,9 +139,9 @@ def test_find_parent(helper, random_parent):
 
     # fuzzy matches work too
     chars = list(name)
-    chars[1] = 'c'
-    chars[4] = 'e'
-    name = ''.join(chars)
+    chars[1] = "c"
+    chars[4] = "e"
+    name = "".join(chars)
     result = helper.find_parent(name)
     assert result
     assert random_parent in result.guardians
