@@ -50,14 +50,6 @@ check-worktree:
 		exit 1; \
 	fi
 
-.PHONY: deploy
-deploy: deploy-docs
-	@if $(IS_COMMIT_TAGGED); then \
-		make dist-production; \
-	else \
-		echo "will not deploy untagged commit"; \
-	fi
-
 .PHONY: deploy-docs
 deploy-docs:
 	docker buildx build --platform linux/amd64 --push -t $(CONTAINER) .
