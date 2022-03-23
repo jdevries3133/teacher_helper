@@ -52,7 +52,7 @@ to populate the module with: `students.csv` and `guardians.csv`.
 After running `th --new`, the module is initialized, and you'll notice a binary
 cache will have been written to the data directory (`~/.teacherhelper`, by
 default). The CLI will now work. Additionally, you can use the Python API
-[as shown in the readme.](../README.md)
+[as shown in the readme.](/)
 
 Note that the `helper` object should always be initialized with the `read_cache()`
 method.

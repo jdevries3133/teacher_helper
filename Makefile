@@ -9,6 +9,12 @@ TWINE=$(WITH_VENV) && twine
 
 IS_COMMIT_TAGGED=[[ $(shell git describe --tags) == $(shell git describe --tags --abbrev=0) ]]
 
+# documentation site container
+DOCKER_ACCOUNT=jdevries3133
+CONTAINER_NAME=teacher_helper_docs
+TAG?=$(shell git describe --tags)
+CONTAINER=$(DOCKER_ACCOUNT)/$(CONTAINER_NAME):$(TAG)
+
 .PHONY: all
 all: venv
 
@@ -45,12 +51,19 @@ check-worktree:
 	fi
 
 .PHONY: deploy
-deploy:
+deploy: deploy-docs
 	@if $(IS_COMMIT_TAGGED); then \
 		make dist-production; \
 	else \
 		echo "will not deploy untagged commit"; \
 	fi
+
+.PHONY: deploy-docs
+deploy-docs:
+	docker buildx build --platform linux/amd64 --push -t $(CONTAINER) .
+	terraform init -input=false
+	terraform apply -auto-approve
+
 
 .PHONY: dist-production
 dist-production: clean check-worktree build test

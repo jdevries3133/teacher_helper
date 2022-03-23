@@ -35,8 +35,8 @@ Full Signature:
         to: str,
         subject: str,
         message: str,
-        cc: str=None,       # TODO: should support a list
-        bcc: str=None,      # TODO: should support a list
+        cc: str=None,
+        bcc: str=None,
         template_name: str='default.html'
     ): ...
 ```
