@@ -68,6 +68,10 @@ class Helper(OnCourseMixin):
         all_guardians = {}
         primary_guardians = {}
         for st in self.students.values():
+            for g in st.guardians:
+                all_guardians.setdefault(g.name, g)
+                if g.primary_contact:
+                    primary_guardians.setdefault(g.name, g)
             primary_contact = cast(ParentGuardian, st.primary_contact)
             if primary_contact is not None:
                 primary_guardians.setdefault(primary_contact.name, primary_contact)

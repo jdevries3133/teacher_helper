@@ -1,15 +1,18 @@
 import csv
+import random
 from typing import cast
-import pytest
 from shutil import rmtree
 import shelve
 import datetime
 from tempfile import mkdtemp
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 from .._data_dir import get_data_dir
 from .fixtures import students_csv, parents_csv
-from ..helper import Helper
+from ..helper import Helper, get_helper
 
 
 @pytest.fixture
@@ -30,6 +33,46 @@ def helper(monkeypatch, students_csv, parents_csv):
     rmtree(dir)
 
 
+@pytest.fixture(params=(list(range(5))))
+def random_student(request, helper):
+    """10 random helper students"""
+    random.seed(request.param)
+    return random.choice(list(helper.students.values()))
+
+
+@pytest.fixture(params=list(range(5)))
+def random_parent(request, helper):
+    random.seed(request.param)
+    all_guardians = set(i for g in helper.students.values() for i in g.guardians)
+    return random.choice(list(all_guardians))
+
+
+def check_helper_equality(a: Helper, b: Helper) -> bool:
+    """Rough __eq__ check for helper objects"""
+    try:
+        assert isinstance(a, Helper)
+        assert isinstance(b, Helper)
+
+        assert list(a.students.keys()) == list(b.students.keys())
+        assert list(a.homerooms.keys()) == list(b.homerooms.keys())
+        for key in a.homerooms:
+            x = a.homerooms[key]
+            y = b.homerooms[key]
+            assert x.students == y.students
+
+        return True
+    except AssertionError:
+        return False
+
+
+def test_get_helper(helper):
+    """Smoke test for the entrypoint function"""
+    # get_helper will read from a cached helper
+    helper.write_cache()
+    helper_ret = get_helper()
+    check_helper_equality(helper, helper_ret)
+
+
 def test_write_cache(helper):
     helper.write_cache()
     cache = get_data_dir() / "cache"
@@ -48,12 +91,59 @@ def test_write_cache(helper):
         # `date` is *almost* right now
         assert (datetime.datetime.now() - date).seconds < 1
 
-        cached_helper = db["data"]
-        assert isinstance(cached_helper, Helper)
+        cached_helper = cast(Helper, db["data"])
+        check_helper_equality(cached_helper, helper)
 
-        assert list(cached_helper.students.keys()) == list(helper.students.keys())
-        assert list(cached_helper.homerooms.keys()) == list(helper.homerooms.keys())
-        for key in helper.homerooms:
-            a = helper.homerooms[key]
-            b = cached_helper.homerooms[key]
-            assert a.students == b.students
+
+def test_read_cache(helper):
+    helper.write_cache()
+    cached_helper = Helper.read_cache()
+    check_helper_equality(helper, cached_helper)
+
+
+def test_find_nearest_match(helper, random_student):
+    name = random_student.name
+    changed = list(name)
+    changed[3] = "b"
+    changed = "".join(changed)
+
+    with patch("teacherhelper.helper.process.extractOne") as p:
+
+        # 89 is below the default threshold of 90
+        p.return_value = name, 89
+        result = helper.find_nearest_match(changed)
+        assert p.mock_calls[-1].args[0] == changed
+        assert result is None
+
+        # if we lower the threshold, we get a result
+        p.return_value = name, 89
+        result = helper.find_nearest_match(changed, threshold=88)
+        assert p.mock_calls[-1].args[0] == changed
+        assert result is random_student
+
+        # if we raise the confidence of the search result, we get a result
+        p.return_value = name, 95
+        result = helper.find_nearest_match(changed)
+        assert p.mock_calls[-1].args[0] == changed
+        assert result is random_student
+
+        for call in p.mock_calls:
+            assert call.args[1] == helper.students.keys()
+
+
+def test_find_parent(helper, random_parent):
+    name = random_parent.name
+    result = helper.find_parent(name)
+    assert result
+    assert random_parent in result.guardians
+
+    # fuzzy matches work too
+    chars = list(name)
+    chars[1] = 'c'
+    chars[4] = 'e'
+    name = ''.join(chars)
+    result = helper.find_parent(name)
+    assert result
+    assert random_parent in result.guardians
+
+    # TODO: test that primary contacts are preferentially matched

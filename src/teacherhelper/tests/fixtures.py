@@ -30,7 +30,7 @@ def students_csv() -> list:
             "Birth Date",
         ]
     ]
-    for teacher, name in zip(cycle(teachers), names):
+    for teacher, name in zip(cycle(teachers), names[:300]):
         first, last = name
         # Each row is:
         # first, last, grade level, homeroom teacher, email, birthday
@@ -41,6 +41,7 @@ def students_csv() -> list:
                 teacher_grade[teacher],
                 teacher,
                 str(hash(first + last))[1:] + "@empacad.org",
+                # birthday
                 f"{random.randint(1, 13)}/{random.randint(1,28)}/{random.randint(2005, 2010)}",
             ]
         )
@@ -68,9 +69,7 @@ def parents_csv(students_csv):
     - Relation to Student
     """
     students_csv_data = students_csv[1:]  # skip header row
-    parent_names = [
-        (first[0], last[1]) for first, last in zip(cycle(names[50:]), names)
-    ] * 2
+    parent_names = names[300:900]
     rows = [
         [
             "Guardian First Name",
@@ -88,17 +87,14 @@ def parents_csv(students_csv):
             "Relation to Student",
         ]
     ]
-    for parent_name, student_row in zip(parent_names, cycle(students_csv_data[5:])):
-        # fix any accidental duplicates
-        while " ".join(parent_name) in [" ".join(n) for n in names]:
-            parent_name = (names[random.randint(0, len(names) - 1)][0], parent_name[1])
+    for parent_name, student_row in zip(parent_names, cycle(students_csv_data)):
         rows.append(
             [
                 *parent_name,  # guardian full name
                 student_row[0],  # student first name
                 student_row[1],  # student last name
                 "Y",  # is primary contact
-                f"{str(hash(parent_name))[1:]}@gmail.com",  # email
+                f"{str(hash(''.join(parent_name)))[1:]}@gmail.com",  # email
                 str(random.randint(9730000000, 9739999999)),  # mobile phone
                 *[""] * 2,  # home & work phone
                 str(hash(tuple(student_row))),  # comments
@@ -110,9 +106,3 @@ def parents_csv(students_csv):
             ]
         )
     return rows
-
-
-@pytest.fixture
-def random_class(students_csv) -> List[str]:
-    teacher = random.sample(students_csv, 1)[0][3]
-    return [s for s in students_csv if s[3] == teacher]

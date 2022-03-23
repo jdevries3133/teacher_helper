@@ -1,7 +1,7 @@
 import csv
 from pathlib import Path
 
-from .fixtures import students_csv, parents_csv, random_class
+from .fixtures import students_csv, parents_csv
 
 with open(Path(Path(__file__).parent, "random_names.csv"), "r") as csvf:
     rd = csv.reader(csvf)
@@ -47,20 +47,9 @@ def test_make_parents_csv(students_csv, parents_csv):
         parent_first_nm, parent_last_nm, *_ = row
         parent_name = " ".join((parent_first_nm, parent_last_nm))
         # no parent shares a name with a student
-        assert parent_name not in [" ".join(n) for n in names]
+        assert parent_name not in [f"{s[0]} {s[1]}" for s in students]
         # no parent shares a name with a teacher
         teachers = set([" ".join(r[3].split(", ")[::-1]) for r in students])
         assert parent_name not in teachers
     # roughly two parents for each student
     assert -2 < len(parents) // 2 - len(students) < 2
-
-
-def test_random_class(random_class):
-    """
-    Test that students from a random class are actually all in the same
-    class and grade level.
-    """
-    class_ = random_class
-    for strow in class_:
-        assert strow[2] == class_[0][2]
-        assert strow[3] == class_[0][3]
