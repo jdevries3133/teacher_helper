@@ -12,21 +12,26 @@ password you normally use to login will do the trick!
 ### `Email.__init__(self, username=None, password=None)`
 
 Returns a new Emailer instance, ready to create an SMTP connection with the
-provided credentials. `__init__` will also create the `email_templates`
-subdirectory inside of `HELPER_DATA` if it doesn't already exist. `HELPER_DATA` is
-`~/.teacherhelper` unless you have defined another location as an environment
-variable.
+provided credentials. `__init__` will also create a folder `$HELPER_DATA/email_templates`,
+which includes a default email template. You can modify this template if you
+want, it won't be overwritten if it exists. See also the [setup guide](./setup)
+for details about `$HELPER_DATA`.
 
-### `Email.__enter__` and `Email.__exit__`
+### Context Manager
 
 `Email` should be used as a context manager. The SMTP connection will be opened
 inside the context manager and closed upon exiting. If you try to use the
-`.send` method without `__enter__` first having been called, a `ValueError`
+`.send` method outside the context manager, a `ValueError`
 will be raised.
+
+```python
+with Email('me@example.com', 'mypass') as emailer:
+    ...
+```
 
 ### `Email.send(...)`
 
-Full Signature:
+This is the full function signature:
 
 ```python
     def send(
@@ -44,27 +49,21 @@ Full Signature:
 Simple utility for sending an email. Helpful for mail merges!
 
 _message_ should be a string of markdown text, which will be converted into
-html and plain text email attachments.
+a MIMEMultipart Email with html and plain text email attachments.
 
 _template_name_ is passed to `Email.make_html_message`.
 
-### `make_html_message(...)`
-
-Full signature:
-
-```python
-def make_html_message(
-        self,
-        markdown_message: str,
-        template_name: str='default.html',
-): ...
-```
+### `make_html_message(self, markdown_message: str, template_name: str='default.html')`
 
 _template_name_ is the name of an html email template in the
 `$HELPER_DATA/email_templates` directory. An email template can be any html file
 with the literal substring `{{ email_content }}` in it. _markdown_message_ will
 be converted into html, and that html will replace the `{{ email_content }}`
-tag.
+tag. For the plain text attachment, the literal markdown string is used. This
+_will not_ include the html template, so the html template should be
+presentational only, and the message should stand alone even if it is not
+wrapped in the template content. For example, the template could be used
+for a header & footer, email signature, pretty frame around the message, etc.
 
 This library comes with a default template named `default.html`. It will be
 copied to `$HELPER_DATA/email_templates/default.html`, and you can use that as

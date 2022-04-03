@@ -1,12 +1,12 @@
 # Overview
 
-This is a library of stuff that I have, used to automate
-my work as a teacher. For the most part, it's been the primary means for me
-learning object oriented programming, and has had a history of massive revision
-as I continue to learn and fix my mistakes. Most recently, in late summer
-2021, I deleted most of the project except the parts I actually use, and I
-plan to continue adding to it throughout this school year; hopefully adding
-some things that are actually useful!
+This is a library of stuff that I have, used to automate my work as a teacher.
+For the most part, it's been the primary means for me learning object oriented
+programming, and has had a history of massive revision as I continue to learn
+and fix my mistakes. Most recently, in late summer 2021, I deleted most of the
+project except the parts I actually use, and I plan to continue adding to it
+throughout this school year; hopefully adding some things that are actually
+useful!
 
 ## Installation
 
@@ -17,7 +17,7 @@ pip install teacherhelper
 ```
 
 Of course, there is some additional work involved in importing your school
-data. See [setup](./setup.md)
+data. See [setup instructions.](https://teacherhelper.jackdevries.com/setup/)
 
 ## Usage
 
