@@ -5,7 +5,7 @@ PY=python3
 VENVDIR=venv
 WITH_VENV=source $(VENVDIR)/bin/activate &&
 
-TWINE=$(WITH_VENV) && twine
+TWINE=$(WITH_VENV) twine
 
 IS_COMMIT_TAGGED=[[ $(shell git describe --tags) == $(shell git describe --tags --abbrev=0) ]]
 
