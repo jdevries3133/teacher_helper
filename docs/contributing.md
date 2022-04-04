@@ -1,3 +1,7 @@
+<!-- NOTE: there is a symlink, so this is *both* /CONTRIBUTING.md and /docs/contributing.md.
+           don't use mkdocs-specific stuff, or github-specifc stuff in here,
+           because it will break somewhere -->
+
 # Contributing Guide
 
 The scope of this library is pretty large; feel free to volunteer new modules

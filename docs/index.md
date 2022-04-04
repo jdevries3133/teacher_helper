@@ -1,3 +1,7 @@
+<!-- NOTE: there is a symlink, so this is *both* /README.md and /docs/index.md.
+           don't use mkdocs-specific stuff, or github-specifc stuff in here,
+           because it will break somewhere -->
+
 [![Teacher Helper CI/CD](https://github.com/jdevries3133/teacher_helper/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/jdevries3133/teacher_helper/actions/workflows/ci_cd.yml)
 
 # Overview

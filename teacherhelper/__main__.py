@@ -1,21 +1,24 @@
 """Teacher Heper CLI"""
 
-import code
 import argparse
+import code
+import sys
 
 from .sis import Sis
 
 
 sis = Sis.read_cache() if Sis.cache_exists() else None
 
+if sis is None:
+    print('fatal: cache does not exist')
+    sys.exit()
+
 
 def find_student(name):
-    assert sis is not None
     print(sis.find_student(name, threshold=60))
 
 
 def find_parent(name):
-    assert sis is not None
     print(sis.find_parent(name))
 
 
