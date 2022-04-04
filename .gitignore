@@ -1,9 +1,6 @@
 # file types
 *.db
 *.log
-*.csv
-*.xlsx
-*.pdf
 
 # editor
 Session.vim
@@ -13,7 +10,6 @@ tags
 
 # python
 dist/
-build/
 *.egg-info
 __pycache__
 *.pyc

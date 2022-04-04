@@ -2,7 +2,8 @@
 requires = [
     "setuptools>=42",
     "wheel",
-    "setuptools-git-versioning"
+    "setuptools-git-versioning",
+    "setuptools_scm"
 ]
 build-backend = "setuptools.build_meta"
 

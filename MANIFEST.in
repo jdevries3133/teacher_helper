@@ -1,0 +1,11 @@
+exclude .exrc
+exclude Dockerfile
+exclude Makefile
+exclude requirements.txt
+exclude requirements.docs.txt
+exclude mkdocs.yml
+exclude documentation.tf
+
+recursive-exclude docs *
+recursive-exclude scripts *
+recursive-exclude .github *
