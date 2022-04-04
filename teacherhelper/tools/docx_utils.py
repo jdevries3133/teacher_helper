@@ -1,5 +1,5 @@
 import re
-from typing import Union
+from typing import List, Union
 
 import docx
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
@@ -8,13 +8,13 @@ from docx.opc.constants import RELATIONSHIP_TYPE as RT
 def docx_regex_search(
     doc: docx.Document,
     regex: Union[str, re.Pattern],
-) -> list[str]:
+) -> List[str]:
     """Iterates through all paragraphs, tables, and hyperlinks in a word doc,
     and extracts any strings that match the regex.
 
     TODO: this needs tests, but it works nicely as far as I recall.
     """
-    matches: list[str] = []
+    matches: List[str] = []
     document = docx.Document(doc)
 
     # search paragraphs

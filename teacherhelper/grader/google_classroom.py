@@ -1,6 +1,6 @@
 import re
 import logging
-from typing import Any, Generator, Literal
+from typing import Any, Dict, Generator, List, Literal
 
 
 logger = logging.getLogger(__name__)
@@ -12,10 +12,10 @@ class GoogleClassroomApiWrapper:
 
     def __init__(
         self,
-        services: dict[Literal["classroom", "drive", "slides"], Any],
+        services: Dict[Literal["classroom", "drive", "slides"], Any],
         *,
-        match_assignments: list[str] = None,
-        match_classrooms: list[str] = None,
+        match_assignments: List[str] = None,
+        match_classrooms: List[str] = None,
     ):
         """`services` is a dict with keys `classroom`, `slides`, and `drive`,
         referring to the service objects from the google client APIs. Classroom
@@ -50,7 +50,7 @@ class GoogleClassroomApiWrapper:
             return self._slides
         raise ValueError("slides service was not passed to __init__")
 
-    def get_classrooms(self) -> list[dict]:
+    def get_classrooms(self) -> List[dict]:
         """Return the classrooms that match self._match_pats.
 
         Returns a list of courseId's that correspond to those classrooms.
@@ -66,7 +66,7 @@ class GoogleClassroomApiWrapper:
                     ret.append(c)
         return ret
 
-    def get_assignments(self, course) -> list[dict]:
+    def get_assignments(self, course) -> List[dict]:
         assignments = (
             self.classroom.courses().courseWork().list(courseId=course["id"]).execute()
         )
@@ -87,7 +87,7 @@ class GoogleClassroomApiWrapper:
                     ret.append(c)
         return ret
 
-    def get_submissions(self, assignment) -> list[dict]:
+    def get_submissions(self, assignment) -> List[dict]:
         submissions = (
             self.classroom.courses()
             .courseWork()

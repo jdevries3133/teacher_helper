@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
-from typing import Literal
+from typing import Dict, List, Literal
 
 from .google_classroom import GoogleClassroomApiWrapper
 from ._entities import GradeResult
@@ -30,7 +30,7 @@ class ClassroomGrader(ABC):
         )
         self.assignment_name = assignment_name
 
-    def grade_assignments(self) -> list[GradeResult]:
+    def grade_assignments(self) -> List[GradeResult]:
         result_map = {}
         for _, assignment, submission in self.classroom.traverse_submissions():
             try:
@@ -49,7 +49,7 @@ class ClassroomGrader(ABC):
                 logger.debug("assignment: %s", assignment)
                 logger.debug("submission: %s", submission)
 
-        retval: list[GradeResult] = []
+        retval: List[GradeResult] = []
 
         for name, result in result_map.items():
             n_complete = 0
@@ -57,7 +57,7 @@ class ClassroomGrader(ABC):
                 if grade:
                     n_complete += 1
             # TODO: leaky abstraction; this should be a separate method
-            n_complete_to_grade: dict[int, Literal[0, 15, 20]] = {0: 0, 1: 15, 2: 20}
+            n_complete_to_grade: Dict[int, Literal[0, 15, 20]] = {0: 0, 1: 15, 2: 20}
             student = sis.find_nearest_match(name)  # type: ignore
             if student is None:
                 logger.warning("no match for %s. skipping", name)

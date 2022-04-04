@@ -18,9 +18,9 @@ Full signature:
 ```python
 def __init__(
     self,
-    homerooms: Dict[str, Homeroom],
-    students: Dict[str, Student],
-    groups: Dict[str, Group],
+    homerooms: dict[str, Homeroom],
+    students: dict[str, Student],
+    groups: dict[str, Group],
 ): ...
 ```
 

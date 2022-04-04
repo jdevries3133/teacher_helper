@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Literal, Union
+from typing import Dict, Literal, Union
 
 from teacherhelper.sis import Student
 
@@ -10,16 +10,16 @@ class Config:
     `overrides.yml`. It is loaded by `__main__.load_config`"""
 
     # where key is student name and value is the comment
-    notes: dict[str, str]
+    notes: Dict[str, str]
 
     # top-level key is a student name. top-level value is a dict of grade type
     # to override value. The override dict can be partially complete.
-    grade_overrides: dict[
-        str, dict[Literal["week 19", "week 20", "week 21", "total"], int]
+    grade_overrides: Dict[
+        str, Dict[Literal["week 19", "week 20", "week 21", "total"], int]
     ]
 
     # where key is student name and value is the overriden grade level
-    grade_level_override: dict[str, int]
+    grade_level_override: Dict[str, int]
 
 
 @dataclass
