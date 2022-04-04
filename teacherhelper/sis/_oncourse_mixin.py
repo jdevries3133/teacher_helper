@@ -46,12 +46,7 @@ class OnCourseMixin:
         HOMEROOMS = {}
 
         # various adapters from grade level representations to int
-        to_number = {
-            '4th Grade': 4,
-            '5th Grade': 5,
-            '6th Grade': 6,
-            '7th Grade': 7
-        }
+        to_number = {"4th Grade": 4, "5th Grade": 5, "6th Grade": 6, "7th Grade": 7}
 
         with open(student_data, "r", encoding="utf-8-sig") as csvfile:
             rd = csv.DictReader(csvfile)
@@ -104,9 +99,7 @@ class OnCourseMixin:
                     "relationship_to_student": row.get("relation to student"),
                 }
                 # find student object match
-                student = self.find_student(  # type: ignore
-                    context["student"]
-                )
+                student = self.find_student(context["student"])  # type: ignore
                 if not student:
                     continue
                 if student.name != context["student"]:
