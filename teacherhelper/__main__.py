@@ -10,7 +10,7 @@ from .sis import Sis
 sis = Sis.read_cache() if Sis.cache_exists() else None
 
 if sis is None:
-    print('fatal: cache does not exist')
+    print("fatal: cache does not exist")
     sys.exit()
 
 

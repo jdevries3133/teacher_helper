@@ -29,6 +29,7 @@ class GradingContext:
     | submissions | https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.courseWork.studentSubmissions.html |
     | students    | https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.students.html                      |
     """
+
     student: Student
 
     google_student: dict
@@ -58,7 +59,7 @@ class ClassroomGrader(ABC, GoogleClassroomApiWrapper):
                         google_student=google_student,
                         course=course,
                         assignment=assignment,
-                        submission=submission
+                        submission=submission,
                     )
                 )
 
@@ -74,10 +75,7 @@ class ClassroomGrader(ABC, GoogleClassroomApiWrapper):
         return retval
 
     @abstractmethod
-    def grade_one(
-        self,
-        context: GradingContext
-    ) -> Union[int, bool]:
+    def grade_one(self, context: GradingContext) -> Union[int, bool]:
         """Grade a single assignment. The return value can be boolean or int,
         depending on whether the assignment is numerically graded, or graded
         for completion only.
