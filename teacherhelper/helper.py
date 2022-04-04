@@ -5,7 +5,7 @@ module adapts from the new API to that old one."""
 from typing import Union
 import warnings
 
-from .sis import Sis, Student, ParentGuardian
+from .sis import Sis, Student
 
 
 class Helper(Sis):

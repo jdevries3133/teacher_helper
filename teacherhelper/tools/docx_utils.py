@@ -1,12 +1,12 @@
 import re
 from typing import List, Union
 
-import docx
+from docx.document import Document
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 
 def docx_regex_search(
-    doc: docx.Document,
+    doc: Document,
     regex: Union[str, re.Pattern],
 ) -> List[str]:
     """Iterates through all paragraphs, tables, and hyperlinks in a word doc,
@@ -15,16 +15,15 @@ def docx_regex_search(
     TODO: this needs tests, but it works nicely as far as I recall.
     """
     matches: List[str] = []
-    document = docx.Document(doc)
 
     # search paragraphs
-    for par in document.paragraphs:
+    for par in doc.paragraphs:
         mo = re.fullmatch(regex, par.text.strip())
         if mo:
             matches.append(mo.string)
 
     # search tables
-    for table in document.tables:
+    for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 mo = re.fullmatch(regex, cell.text.strip())
@@ -32,8 +31,8 @@ def docx_regex_search(
                     matches.append(mo.string)
 
     # search for links
-    for rel in document.part.rels:
-        Rel = document.part.rels[rel]
+    for rel in doc.part.rels:
+        Rel = doc.part.rels[rel]
         if Rel.reltype == RT.HYPERLINK:
             text = Rel._target
             mo = re.fullmatch(regex, text)

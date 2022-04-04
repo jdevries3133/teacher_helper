@@ -1,12 +1,12 @@
 # Student Information System
 
 `teacherhelper.sis` forms a student information system inside Python. Data
-should be imported through the process described in [setup docs.](../setup/)
+should be imported through the process described in [setup docs.](./setup.md/)
 
 ## class `teacherhelper.sis.Sis`
 
 The student information system through which most of the information below
-can be accessed. Again, there is a [setup procedure](../setup) for initially
+can be accessed. Again, there is a [setup procedure](./setup.md) for initially
 populating the class with data. Normally, when you use this in scripts, you
 will use the `read_cache` classmethod for initialization, which loads the
 pickled class from the data directory, as described in the setup docs.
