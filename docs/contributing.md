@@ -5,9 +5,13 @@ as long as they fit with the ethos of the project:
 
 - each module should be focused one one task and widely generalizable for many
   teachers
-- modules should be composable but not interdependent
+- modules should be composable but not interdependent\*
 - modules must include thorough and high quality unit tests
 - modules must include documentation
+
+\*_any module can depend on `teacherhelper.sis`. If we add more modules like
+that, it would probably make sense to have a `teacherhelper.core` or
+`teacherhelper.common` internal API to make that clear`_
 
 Within those limitations, it would be awesome for teachers and
 professors to throw their own utility libraries into the pot to create a

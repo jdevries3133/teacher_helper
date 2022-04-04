@@ -76,10 +76,8 @@ if parent:
 # **************************************************
 
 from teacherhelper.google_classroom import GoogleClassroomApiWrapper
-from teacherhelper.google_client import get_service
 
 wrapper = google_classroom.GoogleClassroomApiWrapper(
-    {'classroom': get_service('classroom', 'v1')},
     match_classrooms=['Ms. Smith', 'Ms. Fischer'],
     match_assignments=['4/25 Homework']
 )

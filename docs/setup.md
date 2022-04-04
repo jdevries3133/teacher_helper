@@ -59,4 +59,4 @@ method.
 
 # Google Oauth Client
 
-See [grader](../grader/) for setup instructions.
+See [docs](./google/client.md) for setup instructions.

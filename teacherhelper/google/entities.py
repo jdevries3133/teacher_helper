@@ -25,7 +25,6 @@ class Config:
 @dataclass
 class GradeResult:
     student: Student
-    assignment: str
     grade: int
 
 

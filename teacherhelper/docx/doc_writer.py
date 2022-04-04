@@ -12,7 +12,7 @@ from docx.document import Document
 from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 
-from ._entities import Page
+from ..google.entities import Page
 
 
 logger = logging.getLogger(__name__)

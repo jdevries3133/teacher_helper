@@ -1,6 +1,9 @@
 import re
 import logging
 from typing import Any, Dict, Generator, List, Literal
+from webbrowser import get
+
+from .client import get_service
 
 
 logger = logging.getLogger(__name__)
@@ -12,43 +15,33 @@ class GoogleClassroomApiWrapper:
 
     def __init__(
         self,
-        services: Dict[Literal["classroom", "drive", "slides"], Any],
         *,
-        match_assignments: List[str] = None,
-        match_classrooms: List[str] = None,
+        match_assignments: List[str],
+        match_classrooms: List[str],
     ):
         """`services` is a dict with keys `classroom`, `slides`, and `drive`,
         referring to the service objects from the google client APIs. Classroom
         is the only required services. If slides or drive are not passed in,
         ValueErrors will be thrown at runtime if methods that use them are
-        called and they are not present."""
-        if services.get("classroom") is None:
-            raise ValueError("classroom service is required")
+        called and they are not present.
+
+        *match_classrooms* is a list of regex patterns for classrooms we will
+        traverse. *match_assignments* is the same, but for assignments within
+        classrooms. We will always traverse all student submissions.
+        """
         # google client libraries are highly dynamic, so explicitly casting to
         # Any supresses type warnings
-        self.classroom: Any = services.get("classroom")
+        self.classroom: Any = get_service("classroom", "v1")
+        self.drive: Any = get_service("drive", "v3")
+        self.slides: Any = get_service("slides", "v1")
 
-        self._drive = services.get("drive")
-        self._slides = services.get("slides")
-        self._match_pats = match_classrooms or []
-        self._match_assgt = match_assignments or []
+        self._match_pats = match_classrooms
+        self._match_assgt = match_assignments
 
         # mapping of assignment ids to teacher content, to avoid repetitive
         # google drive exports
         # TODO: implement me! this is currently unused
         self._teacher_content_cache = {}
-
-    @property
-    def drive(self) -> Any:
-        if self._drive:
-            return self._drive
-        raise ValueError("drive service was not passed to __init__")
-
-    @property
-    def slides(self) -> Any:
-        if self._slides:
-            return self._slides
-        raise ValueError("slides service was not passed to __init__")
 
     def get_classrooms(self) -> List[dict]:
         """Return the classrooms that match self._match_pats.

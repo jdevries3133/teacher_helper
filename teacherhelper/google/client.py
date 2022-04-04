@@ -9,6 +9,8 @@ from teacherhelper._data_dir import get_data_dir
 
 
 class ClientWrapper:
+    """Wrapper for Google's Python client library, which uses the teacherhelper
+    data directory to load credentials and store a token."""
 
     BASE_DIR = get_data_dir() / "google_oauth"
 

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from .._entities import Student
+from teacherhelper.sis import Student
 from ..doc_writer import Term2DocWriter, Page
 
 
