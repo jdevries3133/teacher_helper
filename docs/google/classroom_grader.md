@@ -1,8 +1,50 @@
 # Classroom Grader
 
-## class `ClassroomGrader(ABC, GoogleClassroomApiWrapper): ...`
+> ### Note!
+>
+> You will need to setup oauth credentials on the Google Cloud Platform and
+> provide those credentials to this library before you can use this module.
+> See documentation on the [client wrapper](./client.md) for directions.
 
-Subclass of `[GoogleClassroomApiWrapper](./classroom_wrapper.md)` to facilitate
+## Module `teacherhelper.google.classroom_grader`
+
+Uses GoogleClassroomApiWrapper to create a framework for grading assignments.
+
+## dataclasses
+
+**`GradeResult`**
+
+```python
+@dataclass
+class GradeResult:
+    student: Student
+    grade: int
+```
+
+**`GradingContext`**
+
+```python
+@dataclass
+class GradingContext:
+    student: Student
+
+    google_student: dict
+    course: dict
+    assignment: dict
+    submission: dict
+```
+
+_google_student_, _course_, _assignment_, and _submission_ are all data
+structures emitted by Google's API, and are documented by Google:
+
+- [course](https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.html)
+- [assignment](https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.courseWork.html)
+- [submissions](https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.courseWork.studentSubmissions.html)
+- [students](https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.students.html)
+
+## class `teacherhelper.google.classroom_grader.ClassroomGrader(ABC, GoogleClassroomApiWrapper): ...`
+
+Subclass of [`GoogleClassroomApiWrapper`](./classroom_wrapper.md) to facilitate
 grading assignments.
 
 **`ClassroomGrader.grade_all(self) -> List[GradeResult]: ...`**
@@ -15,9 +57,10 @@ the `grade_one` method to each submission, and return a list of [`GradeResult`](
 Full signature:
 
 ```python
-@abstractmethod
 def grade_one(
-    self, assignment, context: Dict[Literal["course", "assignment"], dict]
+    self,
+    assignment,
+    context: Dict[Literal["course", "assignment", "student"], dict],
 ) -> Union[int, bool]:
 ```
 

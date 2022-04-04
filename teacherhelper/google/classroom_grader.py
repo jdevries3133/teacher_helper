@@ -1,13 +1,40 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 import logging
-from typing import List, Union, Dict, Literal
+from typing import List, Union
 
 from .classroom_wrapper import GoogleClassroomApiWrapper
-from ._entities import GradeResult
-from teacherhelper.sis import Sis
+from teacherhelper.sis import Sis, Student
 
 sis = Sis.read_cache()
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class GradeResult:
+    student: Student
+    grade: int
+
+
+@dataclass
+class GradingContext:
+    """Context that is injected into ClassroomGrader.grade_one
+
+    All of the dicts are documented by Google:
+
+    | member      | documentation                                                                                                          |
+    | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+    | course      | https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.html                               |
+    | assignment  | https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.courseWork.html                    |
+    | submissions | https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.courseWork.studentSubmissions.html |
+    | students    | https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.students.html                      |
+    """
+    student: Student
+
+    google_student: dict
+    course: dict
+    assignment: dict
+    submission: dict
 
 
 class ClassroomGrader(ABC, GoogleClassroomApiWrapper):
@@ -19,15 +46,23 @@ class ClassroomGrader(ABC, GoogleClassroomApiWrapper):
 
         for course, assignment, submission in self.traverse_submissions():
             try:
-                grade = self.grade_one(
-                    assignment, {"course": course, "assignment": assignment}
-                )
-                name = self.get_student_profile(submission)["name"]["fullName"]
-                student = sis.find_student(name)
-                if not student:
+                google_student = self.get_student_profile(submission)
+                name = google_student["name"]["fullName"]
+                sis_student = sis.find_student(name)
+                if not sis_student:
                     raise Exception("student not found")
 
-                retval.append(GradeResult(student=student, grade=grade))
+                grade = self.grade_one(
+                    GradingContext(
+                        student=sis_student,
+                        google_student=google_student,
+                        course=course,
+                        assignment=assignment,
+                        submission=submission
+                    )
+                )
+
+                retval.append(GradeResult(student=sis_student, grade=grade))
 
                 self.log_grade(name, grade, assignment)
             except Exception:
@@ -40,15 +75,17 @@ class ClassroomGrader(ABC, GoogleClassroomApiWrapper):
 
     @abstractmethod
     def grade_one(
-        self, assignment, context: Dict[Literal["course", "assignment"], dict]
+        self,
+        context: GradingContext
     ) -> Union[int, bool]:
-        """Grade a single assignment. Context provides the current course and
-        assignment, as represented by the Google Classroom API.
+        """Grade a single assignment. The return value can be boolean or int,
+        depending on whether the assignment is numerically graded, or graded
+        for completion only.
 
-        For courses, see: https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.html
-        For assignments, see: https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.courseWork.html
-        For submissions, see: https://googleapis.github.io/google-api-python-client/docs/dyn/classroom_v1.courses.courseWork.studentSubmissions.html
-        """
+        Any exception thrown by this method will be handled in *grade_many*,
+        and we will gracefully move on to the next student, so feel free to use
+        exceptions for control flow, since those will get logged more nicely
+        than quietly returning."""
 
     def is_form_submitted(self, submission: dict) -> bool:
         """Grading method for google forms. This assumes that the form grades
