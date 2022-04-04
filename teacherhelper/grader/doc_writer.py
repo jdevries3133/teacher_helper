@@ -4,11 +4,11 @@ the output document of all student results, which will be returned to students."
 from abc import ABC, abstractmethod
 from copy import deepcopy
 import logging
-from os import PathLike
-from re import template
-from typing import Sequence, Union
+from pathlib import Path
+from typing import Sequence, Union, cast
 
-from docx import Document
+from docx import Document as create_document
+from docx.document import Document
 from docx.oxml.ns import nsdecls
 from docx.oxml import parse_xml
 
@@ -23,10 +23,9 @@ class DocWriter(ABC):
     # shading the column on the right
     grade_to_col_mapping = {0: 1, 10: 2, 15: 3, 20: 4}
 
-    def __init__(self, template_doc: Union[PathLike, str, Document]):
-        self.doc: Document = None
-        if isinstance(template_doc, (PathLike, str)):
-            self.doc = Document(template_doc)
+    def __init__(self, template_doc: Union[Path, str, Document]):
+        if isinstance(template_doc, (Path, str)):
+            self.doc = cast(Document, create_document(template_doc))
         else:
             self.doc = template_doc
 

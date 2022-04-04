@@ -4,7 +4,7 @@ from typing import Literal
 
 from .google_classroom import GoogleClassroomApiWrapper
 from ._entities import GradeResult
-from .sis_proxy import helper
+from .sis_proxy import sis
 
 
 logger = logging.getLogger(__name__)
@@ -58,7 +58,7 @@ class ClassroomGrader(ABC):
                     n_complete += 1
             # TODO: leaky abstraction; this should be a separate method
             n_complete_to_grade: dict[int, Literal[0, 15, 20]] = {0: 0, 1: 15, 2: 20}
-            student = helper.find_nearest_match(name)  # type: ignore
+            student = sis.find_nearest_match(name)  # type: ignore
             if student is None:
                 logger.warning("no match for %s. skipping", name)
                 continue

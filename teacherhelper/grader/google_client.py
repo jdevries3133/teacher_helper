@@ -1,23 +1,16 @@
 from copy import copy
-import os
-import shutil
-from tokenize import Token
-from typing import IO
-from webbrowser import get
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-import requests
 
 from teacherhelper._data_dir import get_data_dir
 
 
 class ClientWrapper:
 
-    BASE_DIR = get_data_dir() / 'google_oauth'
+    BASE_DIR = get_data_dir() / "google_oauth"
 
     CREDENTIALS = BASE_DIR / "credentials.json"
     TOKEN = BASE_DIR / "token.json"
@@ -37,7 +30,7 @@ class ClientWrapper:
 
     def __init__(self, scopes=None):
         if not self.CREDENTIALS.exists():
-            raise ValueError('missing oauth credentials')
+            raise ValueError("missing oauth credentials")
 
         if scopes is None:
             scopes = copy(self.DEFAULT_SCOPES)

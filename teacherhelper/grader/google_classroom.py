@@ -12,7 +12,7 @@ class GoogleClassroomApiWrapper:
 
     def __init__(
         self,
-        services: dict[Literal['classroom', 'drive', 'slides'], Any],
+        services: dict[Literal["classroom", "drive", "slides"], Any],
         *,
         match_assignments: list[str] = None,
         match_classrooms: list[str] = None,
@@ -22,11 +22,11 @@ class GoogleClassroomApiWrapper:
         is the only required services. If slides or drive are not passed in,
         ValueErrors will be thrown at runtime if methods that use them are
         called and they are not present."""
-        if services.get('classroom') is None:
+        if services.get("classroom") is None:
             raise ValueError("classroom service is required")
         # google client libraries are highly dynamic, so explicitly casting to
         # Any supresses type warnings
-        self.classroom: Any = services.get('classroom')
+        self.classroom: Any = services.get("classroom")
 
         self._drive = services.get("drive")
         self._slides = services.get("slides")
