@@ -1,15 +1,15 @@
 import csv
 from pathlib import Path
 
-from ._data_dir import get_data_dir
-from .tools.csv_parser import IterCsv
-from .entities import Homeroom, ParentGuardian, Student
+from teacherhelper._data_dir import get_data_dir
+from teacherhelper.tools.csv_parser import IterCsv
+from ._entities import Homeroom, ParentGuardian, Student
 
 
 class OnCourseMixin:
     """This doesn't specifically interface with the OnCourse API, it just
     initializes the helper cache with the spreadsheet reports that I output
-    from oncourse, using those specific headers"""
+    from oncourse, using those specific headers."""
 
     @classmethod
     def new_school_year(cls):
@@ -128,7 +128,7 @@ class OnCourseMixin:
             }
             clean_context = {}
             # find student object match
-            student = self.find_nearest_match(  # type: ignore
+            student = self.find_student(  # type: ignore
                 raw_context["student"],
             )
             if not student:

@@ -1,14 +1,14 @@
 import os
 
-from .helper import Helper
+from .helper import Helper  # raises DeprecationWarning on instantiation
 from .email_ import Email
 
-REQUIRED_VARS = [
+RECCOMENDED_ENV = [
     "EMAIL_USERNAME",
     "EMAIL_PASSWORD",
 ]
 
-for var in REQUIRED_VARS:
+for var in RECCOMENDED_ENV:
     if not os.getenv(var):
         print(
             f"Environment variable {var} is missing, which is necessary for "

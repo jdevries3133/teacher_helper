@@ -57,10 +57,6 @@ default). The CLI will now work. Additionally, you can use the Python API
 Note that the `helper` object should always be initialized with the `read_cache()`
 method.
 
-# Maintainance
+# Google Oauth Client
 
-Students add and drop all the time. To keep your cache in sync, export new
-`csv` files from your learning management system, place them into the
-correct location as described in [initial setup.](#initial-setup-via-th---new)
-Then, just run `th --new` again. Depending on the capibilities of your LMS,
-this may or may not be easily automatable with a cron job.
+See [grader](../grader/) for setup instructions.

@@ -35,7 +35,7 @@ optional arguments:
   --new                 Regenerate the database by parsing student.csv and parent.csv in the $HELPER_DATA directory.
 ```
 
-## API
+## Student Information System (SIS)
 
 The `Helper` object provides an object oriented interface for accessing
 the imported data as well as sending emails if the optional `EMAIL_USERNAME`
@@ -43,7 +43,6 @@ and `EMAIL_PASSWORD` environment variables are set. This makes any kind of
 scripting involving school information much more accessible.
 
 ```python
-from teacherhelper import Helper
 
 name = 'tommey'  # Timmy needs a typing lesson, but this library is great for
                  # data bunging!
@@ -52,23 +51,43 @@ name = 'tommey'  # Timmy needs a typing lesson, but this library is great for
 # ==== Student Information System inside Python ====
 # **************************************************
 
+from teacherhelper.sis import Sis
+
 # after following the setup steps in ./docs/CORE.md, this "just works," making
 # it super easy to interact with student information from any python script
-helper = Helper.read_cache()
+helper = Sis.read_cache()
 
-result = helper.find_nearest_match(name)  # -> Union[Student, None]
+result: Student | None = helper.find_student(name)
 if result:
     print(result)
 else:
     print(f'{name} not found')
 
-# the find_parent method, returns a *student* searched for by parent name
 parent = 'Lisa Tommymom'
-result = helper.find_parent(name)
-if result:
-    # you can still refer back to the parent from the student, if needed
-    parent_name = result.primary_contact.name
-    parent_email = result.primary_contact.email
+parent = helper.find_parent(name)
+if parent:
+    print(f'{parent.name=} :: {parent.phone_number=}')
+
+
+# **************************************************
+# ==== Traverse Google Classroom ====
+# **************************************************
+
+from teacherhelper.google_classroom import GoogleClassroomApiWrapper
+from teacherhelper.google_client import get_service
+
+wrapper = google_classroom.GoogleClassroomApiWrapper(
+    {'classroom': get_service('classroom', 'v1')},
+    match_classrooms=['Ms. Smith', 'Ms. Fischer'],
+    match_assignments=['4/25 Homework']
+)
+
+for classroom, assignment, submission in my_wrapper.traverse_submissions():
+    # this will keep on generating submissions that match the match criteria
+    # described above
+    assert classroom['name'] in ('Ms. Smith', 'Ms. Fischer')
+    assert re.match('4/25 Homework', assignment['title']) is not None
+    print(submission)
 
 
 # **************************************************

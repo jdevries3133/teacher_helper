@@ -18,14 +18,15 @@ class Email:
         self.password = password or os.getenv("EMAIL_PASSWORD", "")
         self.connection = None
 
-        # create ~/.teacherhelper/email_templates if needed
+        # create ~/.teacherhelper/email_templates if needed. Copy the default
+        # template into there if it doesn't already exist
         self.template_dir = get_data_dir() / ".teacherhelper" / "email_templates"
         if not self.template_dir.exists():
             os.makedirs(self.template_dir)
         default_template = Path(self.template_dir, "default.html")
         if not default_template.exists():
             shutil.copyfile(
-                Path(Path(__file__).parent, "email_default_template.html"),
+                Path(Path(__file__).parent, "default_email_template.html"),
                 default_template,
             )
 
@@ -53,8 +54,8 @@ class Email:
         to: Union[str, list],
         subject: str,
         message: str,
-        cc: Union[list, str] = None,
-        bcc: Union[list, str] = None,
+        cc: Union[list, str] = "",
+        bcc: Union[list, str] = "",
         template_name: str = "default.html"
     ):
         """

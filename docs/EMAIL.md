@@ -1,4 +1,4 @@
-# Easy Email Wrapper
+# Emailer
 
 The email module allows you to send emails through your own email address via
 SMTP very easily. Note that if you use gmail with two factor authentication,
@@ -14,7 +14,7 @@ password you normally use to login will do the trick!
 Returns a new Emailer instance, ready to create an SMTP connection with the
 provided credentials. `__init__` will also create a folder `$HELPER_DATA/email_templates`,
 which includes a default email template. You can modify this template if you
-want, it won't be overwritten if it exists. See also the [setup guide](./setup)
+want, it won't be overwritten if it exists. See also the [setup guide](../setup)
 for details about `$HELPER_DATA`.
 
 ### Context Manager

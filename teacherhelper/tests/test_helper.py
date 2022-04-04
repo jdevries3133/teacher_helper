@@ -107,7 +107,7 @@ def test_find_nearest_match(helper, random_student):
     changed[3] = "b"
     changed = "".join(changed)
 
-    with patch("teacherhelper.helper.process.extractOne") as p:
+    with patch("teacherhelper.sis._sis.process.extractOne") as p:
 
         # 89 is below the default threshold of 90
         p.return_value = name, 89

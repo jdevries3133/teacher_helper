@@ -3,26 +3,26 @@
 import code
 import argparse
 
-from .helper import Helper
+from .sis import Sis
 
 
-helper = Helper.read_cache() if Helper.cache_exists() else None
+sis = Sis.read_cache() if Sis.cache_exists() else None
 
 
 def find_student(name):
-    assert helper is not None
-    print(helper.find_nearest_match(name, threshold=60))
+    assert sis is not None
+    print(sis.find_student(name, threshold=60))
 
 
 def find_parent(name):
-    assert helper is not None
-    print(helper.find_parent(name))
+    assert sis is not None
+    print(sis.find_parent(name))
 
 
 def shell():
     code.interact(
         local={
-            "helper": helper,
+            "sis": sis,
         }
     )
 
@@ -44,7 +44,7 @@ def main():
     args = parser.parse_args()
 
     if args.new:
-        Helper.new_school_year().write_cache()
+        Sis.new_school_year().write_cache()
     elif args.student:
         find_student(args.student)
     elif args.parent:
