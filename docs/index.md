@@ -1,3 +1,5 @@
+[![Teacher Helper CI/CD](https://github.com/jdevries3133/teacher_helper/actions/workflows/ci_cd.yml/badge.svg)](https://github.com/jdevries3133/teacher_helper/actions/workflows/ci_cd.yml)
+
 # Overview
 
 This is a library of stuff that I have, used to automate my work as a teacher.
