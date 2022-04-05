@@ -1,7 +1,6 @@
 import re
 import logging
-from typing import Any, Dict, Generator, List, Literal
-from webbrowser import get
+from typing import Any, Generator, List
 
 from .client import get_service
 

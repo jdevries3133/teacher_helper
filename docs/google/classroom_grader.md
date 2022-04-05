@@ -4,7 +4,15 @@
 >
 > You will need to setup oauth credentials on the Google Cloud Platform and
 > provide those credentials to this library before you can use this module.
-> See documentation on the [client wrapper](./client.md) for directions.
+
+<blockquote style="background-color: #fedada">
+  <h3>Warning</h3>
+  <p>
+      This module does not have thorough unit tests yet. Please validate the
+      results with care, report bugs that you find, and consider contributing some
+      tests!
+  </p>
+</blockquote> See documentation on the [client wrapper](./client.md) for directions.
 
 ## Module `teacherhelper.google.classroom_grader`
 
