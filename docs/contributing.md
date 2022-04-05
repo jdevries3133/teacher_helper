@@ -66,6 +66,11 @@ from current git tag. This runs in GitHub Actions for any tagged commit.
 
 Same as dist-production, but upload to test PyPi instead.
 
+### `.exrc`
+
+There is a vim `.exrc` file in the root of the project which maps `te` to
+`:make test <cr>` in normal mode.
+
 ## Windows Compatibility
 
 I (jdevries3133, the original author) develop on OS X, I develop for Linux
