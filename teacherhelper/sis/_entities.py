@@ -116,9 +116,6 @@ class ParentGuardian:
         # type checking
         if not isinstance(self.student, Student):
             raise ValueError("Student was a string, not a Student object.")
-        for k, v in self.__dict__.items():
-            if "phone" in k and v and not isinstance(v, int):
-                raise ValueError("Phone number should be of type int.")
 
     def __str__(self):
         outs = [
