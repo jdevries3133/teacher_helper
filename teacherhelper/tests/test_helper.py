@@ -149,6 +149,7 @@ def test_find_parent(helper, random_parent):
     assert result
     assert random_parent in result.guardians
 
+
 def test_deprecation_warning_raised(helper):
     """get_helper and Helper.__init__ should cause a deprecation warnings"""
     with pytest.deprecated_call():

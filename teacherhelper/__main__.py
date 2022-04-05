@@ -11,13 +11,13 @@ sis = Sis.read_cache() if Sis.cache_exists() else None
 
 def find_student(name):
     if not sis:
-        raise ValueError('fatal: cache does not exist')
+        raise ValueError("fatal: cache does not exist")
     print(sis.find_student(name, threshold=60))
 
 
 def find_parent(name):
     if not sis:
-        raise ValueError('fatal: cache does not exist')
+        raise ValueError("fatal: cache does not exist")
     print(sis.find_parent(name))
 
 
