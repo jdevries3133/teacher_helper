@@ -1,5 +1,3 @@
-"""This tests that the deprecated `helper` interface still works."""
-
 import csv
 import random
 from typing import cast
@@ -9,13 +7,13 @@ import datetime
 from tempfile import mkdtemp
 from pathlib import Path
 from unittest.mock import patch
-from webbrowser import get
 
 import pytest
 
-from .._data_dir import get_data_dir
-from ..sis.tests.fixtures import students_csv, parents_csv
-from ..helper import Helper, get_helper
+from teacherhelper._data_dir import get_data_dir
+from .fixtures import students_csv, parents_csv
+from .._sis import Sis
+from .._entities import ParentGuardian
 
 
 @pytest.fixture
@@ -32,7 +30,7 @@ def helper(monkeypatch, students_csv, parents_csv):
             writer = csv.writer(fp)
             writer.writerows(data)
 
-    yield Helper.new_school_year()
+    yield Sis.new_school_year()
     rmtree(dir)
 
 
@@ -50,11 +48,11 @@ def random_parent(request, helper):
     return random.choice(list(all_guardians))
 
 
-def check_helper_equality(a: Helper, b: Helper) -> bool:
+def check_helper_equality(a: Sis, b: Sis) -> bool:
     """Rough __eq__ check for helper objects"""
     try:
-        assert isinstance(a, Helper)
-        assert isinstance(b, Helper)
+        assert isinstance(a, Sis)
+        assert isinstance(b, Sis)
 
         assert list(a.students.keys()) == list(b.students.keys())
         assert list(a.homerooms.keys()) == list(b.homerooms.keys())
@@ -66,14 +64,6 @@ def check_helper_equality(a: Helper, b: Helper) -> bool:
         return True
     except AssertionError:
         return False
-
-
-def test_get_helper(helper):
-    """Smoke test for the entrypoint function"""
-    # get_helper will read from a cached helper
-    helper.write_cache()
-    helper_ret = get_helper()
-    check_helper_equality(helper, helper_ret)
 
 
 def test_write_cache(helper):
@@ -94,17 +84,17 @@ def test_write_cache(helper):
         # `date` is *almost* right now
         assert (datetime.datetime.now() - date).seconds < 1
 
-        cached_helper = cast(Helper, db["data"])
+        cached_helper = cast(Sis, db["data"])
         check_helper_equality(cached_helper, helper)
 
 
 def test_read_cache(helper):
     helper.write_cache()
-    cached_helper = Helper.read_cache()
+    cached_helper = Sis.read_cache()
     check_helper_equality(helper, cached_helper)
 
 
-def test_find_nearest_match(helper, random_student):
+def test_find_student(helper, random_student):
     name = random_student.name
     changed = list(name)
     changed[3] = "b"
@@ -114,19 +104,19 @@ def test_find_nearest_match(helper, random_student):
 
         # 89 is below the default threshold of 90
         p.return_value = name, 89
-        result = helper.find_nearest_match(changed)
+        result = helper.find_student(changed)
         assert p.mock_calls[-1].args[0] == changed
         assert result is None
 
         # if we lower the threshold, we get a result
         p.return_value = name, 89
-        result = helper.find_nearest_match(changed, threshold=88)
+        result = helper.find_student(changed, threshold=88)
         assert p.mock_calls[-1].args[0] == changed
         assert result is random_student
 
         # if we raise the confidence of the search result, we get a result
         p.return_value = name, 95
-        result = helper.find_nearest_match(changed)
+        result = helper.find_student(changed)
         assert p.mock_calls[-1].args[0] == changed
         assert result is random_student
 
@@ -138,7 +128,7 @@ def test_find_parent(helper, random_parent):
     name = random_parent.name
     result = helper.find_parent(name)
     assert result
-    assert random_parent in result.guardians
+    assert isinstance(result, ParentGuardian)
 
     # fuzzy matches work too
     chars = list(name)
@@ -147,15 +137,6 @@ def test_find_parent(helper, random_parent):
     name = "".join(chars)
     result = helper.find_parent(name)
     assert result
-    assert random_parent in result.guardians
+    assert isinstance(result, ParentGuardian)
 
-def test_deprecation_warning_raised(helper):
-    """get_helper and Helper.__init__ should cause a deprecation warnings"""
-    with pytest.deprecated_call():
-        Helper({}, {}, {})
-
-    # below does not work if cache does not exist. This will write into temp
-    # dir because of helper fixture
-    helper.write_cache()
-    with pytest.deprecated_call():
-        get_helper()
+    # TODO: test that primary contacts are preferentially matched

@@ -26,6 +26,15 @@ class Helper(Sis):
         if result:
             return result.student
 
+    @classmethod
+    def read_cache(cls, *a, **kw):
+        warnings.warn(
+            "Helper interface is deprecated. Use teacherhelper.Sis instead.",
+            DeprecationWarning,
+        )
+        return super().read_cache(*a, **kw)
+
+
 
 def get_helper() -> Helper:
     return Helper.read_cache()
