@@ -6,13 +6,13 @@
 
 # Overview
 
-This is a library of stuff that I have, used to automate my work as a teacher.
-For the most part, it's been the primary means for me learning object oriented
-programming, and has had a history of massive revision as I continue to learn
-and fix my mistakes. Most recently, in late summer 2021, I deleted most of the
-project except the parts I actually use, and I plan to continue adding to it
-throughout this school year; hopefully adding some things that are actually
-useful!
+This is a library of stuff that I have used to automate my work as a teacher.
+With version 2.0, I've worked to increase the quality of the codebase by adding
+unit tests, comitting to API stability (see
+[contributing](https://teacherhelper.jackdevries.com/contributing#versioning)),
+creating this documentation site, and creating a CI/CD pipeline. My hope is
+that these efforts make this codebase useful to others, and that others might
+even consider contributing!
 
 ## Installation
 
@@ -22,8 +22,8 @@ You can install this package via pip:
 pip install teacherhelper
 ```
 
-Of course, there is some additional work involved in importing your school
-data. See [setup instructions.](https://teacherhelper.jackdevries.com/setup/)
+Then, perform the setup described in
+[setup instructions.](https://teacherhelper.jackdevries.com/setup/)
 
 ## Usage
 
@@ -41,12 +41,7 @@ optional arguments:
   --new                 Regenerate the database by parsing student.csv and parent.csv in the $HELPER_DATA directory.
 ```
 
-## Student Information System (SIS)
-
-The `Helper` object provides an object oriented interface for accessing
-the imported data as well as sending emails if the optional `EMAIL_USERNAME`
-and `EMAIL_PASSWORD` environment variables are set. This makes any kind of
-scripting involving school information much more accessible.
+## Example Usage
 
 ```python
 
@@ -59,18 +54,18 @@ name = 'tommey'  # Timmy needs a typing lesson, but this library is great for
 
 from teacherhelper.sis import Sis
 
-# after following the setup steps in ./docs/CORE.md, this "just works," making
-# it super easy to interact with student information from any python script
+# some assembly required! Docs site link is at the end of the README
 helper = Sis.read_cache()
 
-result: Student | None = helper.find_student(name)
+# name is matched by fuzzy search, match threshold is adjustable with a kwarg
+result: Student | None = helper.find_student(name, threshold=80)
 if result:
     print(result)
 else:
     print(f'{name} not found')
 
 parent = 'Lisa Tommymom'
-parent = helper.find_parent(name)
+parent = sis.find_parent(name)
 if parent:
     print(f'{parent.name=} :: {parent.phone_number=}')
 
@@ -81,6 +76,7 @@ if parent:
 
 from teacherhelper.google_classroom import GoogleClassroomApiWrapper
 
+# again, setup steps are documented on the docs site
 wrapper = google_classroom.GoogleClassroomApiWrapper(
     match_classrooms=['Ms. Smith', 'Ms. Fischer'],
     match_assignments=['4/25 Homework']
@@ -103,7 +99,8 @@ from teacherhelper import Email
 # don't forget our variables defined above
 tommy = result
 
-with Email(username="me@site.com", password="supersecret") as eml:
+# you can also define EMAIL_USER and EMAIL_PASSWORD environment variables
+with Email(username="me@example.com", password="supersecret") as eml:
     eml.send(
         to=tommy.primary_conteact.email,
         subject="Tommy Needs Spelling Help",
@@ -122,7 +119,7 @@ assignment recently. Here are some spelling tools I would recommend:
 | Khan Academy              | https://www.khanacademy.org/     |
 | Grammarly                 | https://www.grammarly.com/       |
 | Webster Dictionary Online | https://www.merriam-webster.com/ |
-"""
+""",
         cc=result.email
     )
 ```
@@ -130,3 +127,9 @@ assignment recently. Here are some spelling tools I would recommend:
 ## Documentation Site
 
 Visit the documentation site at [teacherhelper.jackdevries.com](https://teacherhelper.jackdevries.com/)
+
+### About the Docs Site
+
+The docs site will _always_ remain in sync with the latest release. Every
+release is tagged on GitHub, so use version control to access documentation for
+previous versions.

@@ -58,7 +58,8 @@ grading assignments.
 **`ClassroomGrader.grade_all(self) -> List[GradeResult]: ...`**
 
 Iterate through all assignment submissions matching the given criteria, apply
-the `grade_one` method to each submission, and return a list of [`GradeResult`](./entities.md)
+the `grade_one` method to each submission, and return a list of
+[`GradeResult`.](#dataclasses)
 
 **`ClassroomGrader.grade_one(...): ...`**
 
@@ -91,6 +92,6 @@ several assignments, then combining it into some larger output.
 
 Grading method for google slides (completion).
 
-**`ClassroomGrader.log_grade(self, name, grade, assignment): ...`**
+**`ClassroomGrader.log_grade(self, name, grade, assignment) -> None: ...`**
 
 Output the result of a grading action to the logger.

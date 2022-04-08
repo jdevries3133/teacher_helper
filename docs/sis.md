@@ -60,24 +60,31 @@ This is a staticmethod.
 
 ## Entities
 
-Several related entities are referenced throughout the module and can be used
-for typing in your own code. I will refactor these to dataclasses one day,
-and so I will document them as if they are dataclasses (they're not).
+These container classes are used to represent data and relationships. These
+classes are _not currently_ dataclasses; they are currently just dumb container
+classes ([see source](https://github.com/jdevries3133/teacher_helper/blob/main/teacherhelper/sis/_entities.py)).
 
-I also dislike that all of these fields can be None because it makes things
-unnecessarily complex, but that's another thing I aim to fix some day.
+The attributes of each entity are briefly documented in pseudocode below.
+If you want to write a script to instantiate [`sis.Sis`](#class-teacherhelpersissis) without using the
+`new_school_year` method documented in [setup](./setup.md), you will need to
+construct these objects and their relationships.
+
+Each of these classes are accessible in the `teacherhelper.sis` namespace,
+so:
+
+- `teacherhelper.sis.Student`
+- `teacherhelper.sis.ParentGuardian`
+- `teacherhelper.sis.Group`
+- `teacherhelper.sis.Homeroom`
 
 ```python
-@dataclass
 class Student:
-    context.setdefault("groups", [])
-    context.setdefault("guardians", [])
     first_name: str | None
     last_name: str | None
     student_id: str | None
     homeroom: str | None
     grade_level: str | None
-    groups: str | None
+    groups: list[str]
     email: str | None
     guardians: list[ParentGuardian]
     self.primary_contact: ParentGuardian | None
@@ -87,7 +94,6 @@ class Student:
       return self.first_name + " " + self.last_name
 
 
-@dataclass
 class ParentGuardian:
     student: Student
     first_name: str | None
@@ -106,7 +112,6 @@ class ParentGuardian:
       return self.first_name + " " + self.last_name
 
 
-@dataclass
 class Group:
     name: str | None
     grade_level: str | None
@@ -117,5 +122,4 @@ class Homeroom:
     teacher: str
     grade_level: str
     students: list[Student]
-
 ```

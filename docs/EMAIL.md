@@ -7,7 +7,7 @@ you will need to
 to make this work. Otherwise, and for most email clients, the username and
 password you normally use to login will do the trick!
 
-## `teacherhelper.Email` Class Reference
+## class `teacherhelper.Email`
 
 ### `Email.__init__(self, username=None, password=None)`
 
@@ -16,6 +16,11 @@ provided credentials. `__init__` will also create a folder `$HELPER_DATA/email_t
 which includes a default email template. You can modify this template if you
 want, it won't be overwritten if it exists. See also the [setup guide](../setup)
 for details about `$HELPER_DATA`.
+
+### Environment Variables
+
+You can also define environment variables, `EMAIL_USERNAME` and `EMAIL_PASSWORD`
+instead of passing these values via the init function.
 
 ### Context Manager
 
@@ -29,9 +34,9 @@ with Email('me@example.com', 'mypass') as emailer:
     ...
 ```
 
-### `Email.send(...)`
+### `Email.send(...) -> None: ...`
 
-This is the full function signature:
+Full signature:
 
 ```python
     def send(
@@ -48,12 +53,12 @@ This is the full function signature:
 
 Simple utility for sending an email. Helpful for mail merges!
 
-_message_ should be a string of markdown text, which will be converted into
-a MIMEMultipart Email with html and plain text email attachments.
+_message_ should be a string of markdown text, which will be converted into a
+multipart email with html and plain text attachments.
 
 _template_name_ is passed to `Email.make_html_message`.
 
-### `make_html_message(self, markdown_message: str, template_name: str='default.html')`
+### `Email.make_html_message(self, markdown_message: str, template_name: str='default.html')`
 
 _template_name_ is the name of an html email template in the
 `$HELPER_DATA/email_templates` directory. An email template can be any html file
@@ -67,4 +72,6 @@ for a header & footer, email signature, pretty frame around the message, etc.
 
 This library comes with a default template named `default.html`. It will be
 copied to `$HELPER_DATA/email_templates/default.html`, and you can use that as
-a starting point for customization or replace it with your own template.
+a starting point for customization or replace it with your own template. It
+will not be overwritten if it exists, and this action is performed during
+`Email.__init__`.
