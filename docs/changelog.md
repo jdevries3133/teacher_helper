@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1
+
+- Update documentation and README
+
 ## v2.0.0
 
 - incorporate codebase from [term 2
