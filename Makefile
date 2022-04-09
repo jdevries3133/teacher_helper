@@ -28,8 +28,6 @@ WITH_VENV=source $(VENVDIR)/bin/activate &&
 
 TWINE=$(WITH_VENV) twine
 
-IS_COMMIT_TAGGED=[[ $(shell git describe --tags) == $(shell git describe --tags --abbrev=0) ]]
-
 # documentation site container
 DOCKER_ACCOUNT=jdevries3133
 CONTAINER_NAME=teacher_helper_docs
