@@ -54,62 +54,61 @@ name = 'tommey'  # Timmy needs a typing lesson, but this library is great for
 
 from teacherhelper.sis import Sis
 
-# some assembly required! Docs site link is at the end of the README
-helper = Sis.read_cache()
+# some assembly required! See https://teacherhelper.jackdevries.com/setup/
+sis = Sis.read_cache()
 
-# name is matched by fuzzy search, match threshold is adjustable with a kwarg
-result: Student | None = helper.find_student(name, threshold=80)
+# fuzzy string matching is used to lookup the student object from the name
+result: Student | None = sis.find_student(name, threshold=80)
 if result:
     print(result)
 else:
     print(f'{name} not found')
 
-parent = 'Lisa Tommymom'
+parent = 'Lisa Tommyparent'
 parent = sis.find_parent(name)
 if parent:
     print(f'{parent.name=} :: {parent.phone_number=}')
 
 
-# **************************************************
+# ***********************************
 # ==== Traverse Google Classroom ====
-# **************************************************
+# ***********************************
 
-from teacherhelper.google_classroom import GoogleClassroomApiWrapper
+from teacherhelper.google.classroom_wrapper import GoogleClassroomApiWrapper
 
-# again, setup steps are documented on the docs site
+# See https://teacherhelper.jackdevries.com/google/classroom_wrapper/
 wrapper = google_classroom.GoogleClassroomApiWrapper(
     match_classrooms=['Ms. Smith', 'Ms. Fischer'],
     match_assignments=['4/25 Homework']
 )
 
-for classroom, assignment, submission in my_wrapper.traverse_submissions():
-    # this will keep on generating submissions that match the match criteria
-    # described above
+for classroom, assignment, submission in wrapper.traverse_submissions():
     assert classroom['name'] in ('Ms. Smith', 'Ms. Fischer')
     assert re.match('4/25 Homework', assignment['title']) is not None
     print(submission)
 
 
-# **************************************************
+# ****************************
 # ==== Send Emails Easily ====
-# **************************************************
+# ****************************
 
-from teacherhelper import Email
+# see https://teacherhelper.jackdevries.com/EMAIL/
+from teacherhelper import Email, Sis
 
-# don't forget our variables defined above
-tommy = result
 
-# you can also define EMAIL_USER and EMAIL_PASSWORD environment variables
+student = Sis.read_cache().find_student('Tommy Smith')
+
+
 with Email(username="me@example.com", password="supersecret") as eml:
     eml.send(
-        to=tommy.primary_conteact.email,
+        to=student.primary_conteact.email,
         subject="Tommy Needs Spelling Help",
 
         # the emailer supports markdown input, and will inject the resulting
         # html into a default template, or a template that you can create!
-        message=f"""Hello Ms. {tommy.primary_contact.name},
+        message=f"""Hello Ms. {student.primary_contact.name},
 
-I noticed that {tommy.first_name} spelled his name like "tommey" on an
+I noticed that {student.first_name} spelled his name like "tommey" on an
 assignment recently. Here are some spelling tools I would recommend:
 
 ## List of Spelling Tools
