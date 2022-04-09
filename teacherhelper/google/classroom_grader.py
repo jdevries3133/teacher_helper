@@ -89,7 +89,7 @@ class ClassroomGrader(ABC, GoogleClassroomApiWrapper):
         """Grading method for google forms. This assumes that the form grades
         were already imported, and it returns a boolean indicating completion
         (was the form submitted or not)"""
-        return bool(submission.get("draftGrade") is not None)
+        return submission.get("draftGrade") is not None
 
     def is_slideshow_changed(self, submission) -> bool:
         """Grading method for google slides (completion). Note that this always
