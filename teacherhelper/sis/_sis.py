@@ -114,5 +114,5 @@ class Sis(OnCourseMixin):
             sh = shelve.open(os.path.join(get_data_dir(), "cache"), "r")
             sh.close()
             return True
-        except dbm.error:
+        except cast(dbm.error, Exception):
             return False
