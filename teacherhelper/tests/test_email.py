@@ -15,7 +15,7 @@ def test_setup_template():
 
         Email().setup()
 
-        created_template = Path(temp.name) / 'email_templates' / 'default.html'
+        created_template = Path(temp.name) / "email_templates" / "default.html"
         assert created_template.exists()
-        with open(created_template, 'r') as fp:
-            assert '{{ email_content }}' in fp.read()
+        with open(created_template, "r") as fp:
+            assert "{{ email_content }}" in fp.read()

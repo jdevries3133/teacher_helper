@@ -18,7 +18,6 @@ class Email:
         self.password = password or os.getenv("EMAIL_PASSWORD", "")
         self.connection = None
 
-
     def setup(self):
         """Prepare email templates directory if needed.
         Copy the default template packaged with this library to the data dir
@@ -26,7 +25,7 @@ class Email:
 
         This method is called by __enter__"""
 
-        # create `email_templates` within the data dir if needed. 
+        # create `email_templates` within the data dir if needed.
         self.template_dir = get_data_dir() / "email_templates"
         if not self.template_dir.exists():
             os.makedirs(self.template_dir)
