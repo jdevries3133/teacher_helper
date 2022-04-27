@@ -5,7 +5,6 @@ Script to generate mock data.
 import csv
 from pathlib import Path
 from itertools import cycle
-from typing import List
 import random
 
 import pytest
