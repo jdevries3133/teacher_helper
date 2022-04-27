@@ -3,16 +3,15 @@ Script to generate mock data.
 """
 
 import csv
-from pathlib import Path
 from itertools import cycle
+from importlib import resources
 import random
 
 import pytest
 
 
-with open(Path(Path(__file__).parent, "random_names.csv"), "r") as csvf:
-    rd = csv.reader(csvf)
-    names = [r for r in rd]
+with resources.open_text("teacherhelper.sis.tests", "random_names.csv") as fp:
+    names = [r for r in csv.reader(fp)]
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from importlib import resources
 from pathlib import Path
-import shutil
 import smtplib
 import ssl
 import os
@@ -18,19 +18,30 @@ class Email:
         self.password = password or os.getenv("EMAIL_PASSWORD", "")
         self.connection = None
 
-        # create ~/.teacherhelper/email_templates if needed. Copy the default
-        # template into there if it doesn't already exist
-        self.template_dir = get_data_dir() / ".teacherhelper" / "email_templates"
+
+    def setup(self):
+        """Prepare email templates directory if needed.
+        Copy the default template packaged with this library to the data dir
+        if needed.
+
+        This method is called by __enter__"""
+
+        # create `email_templates` within the data dir if needed. 
+        self.template_dir = get_data_dir() / "email_templates"
         if not self.template_dir.exists():
             os.makedirs(self.template_dir)
+
+        # Copy the default template into there if it doesn't already exist
         default_template = Path(self.template_dir, "default.html")
         if not default_template.exists():
-            shutil.copyfile(
-                Path(Path(__file__).parent, "default_email_template.html"),
-                default_template,
-            )
+            with open(default_template, "w") as fp:
+                template = resources.open_text(
+                    "teacherhelper", "default_email_template.html"
+                )
+                fp.write(template.read())
 
     def __enter__(self):
+        self.setup()
         context = ssl.create_default_context()
         self.connection = smtplib.SMTP_SSL(
             "smtp.gmail.com",
