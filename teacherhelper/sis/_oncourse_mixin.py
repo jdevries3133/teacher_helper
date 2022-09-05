@@ -101,7 +101,7 @@ class OnCourseMixin:
 
                 for k, v in context.items():
                     if v is None:
-                        raise Exception(f'could not find value for {k}')
+                        raise Exception(f"could not find value for {k}")
 
                 # find student object match
                 student = self.find_student(context["student"])  # type: ignore
