@@ -38,7 +38,7 @@ platformdirs==2.5.1
 pluggy==0.13.1
 protobuf==3.20.2
 py==1.10.0
-pyasn1==0.4.8
+pyasn1==0.6.3
 pyasn1-modules==0.2.8
 Pygments==2.10.0
 pyparsing==2.4.7
