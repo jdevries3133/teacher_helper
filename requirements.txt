@@ -42,7 +42,7 @@ pyasn1==0.4.8
 pyasn1-modules==0.2.8
 Pygments==2.10.0
 pyparsing==2.4.7
-pytest==6.2.4
+pytest==9.0.3
 python-dateutil==2.8.2
 python-docx==0.8.11
 python-Levenshtein==0.12.2
